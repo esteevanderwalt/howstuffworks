@@ -279,6 +279,8 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
 
     <div class="analogy"><b>Analogy:</b> A CPU is a <b>sports car</b> — gets one passenger across town fast. A GPU is a <b>fleet of buses</b> — each bus is slower, but together they move thousands of people. For adding two numbers, take the sports car. For adding a billion pairs of numbers, take the buses.</div>
 
+    <p class="muted"><b style="color:var(--ink)">"But CPUs are multicore too!"</b> — true, and they do real parallel work. A modern CPU has a handful of cores (≈8–64), often running two threads each (hyper-threading) — so tens of hardware threads. "A few fast workers" means <em>few relative to a GPU</em>, which keeps <em>hundreds of thousands</em> of threads in flight. So it's not one-vs-many — it's a few big, clever cores versus thousands of tiny, simple ones.</p>
+
     <p class="muted">This shows up in the chip layout. CPUs spend silicon on caches and control logic to keep one thread sprinting. GPUs spend it on raw arithmetic units (ALUs):</p>
 
     <div class="grid2" style="margin-top:14px">
@@ -580,7 +582,7 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
     <h3>References &amp; further reading</h3>
     <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Every spec and concept here was checked against these:</p>
     <ul class="refs">
-      <li><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a> — <span>the SIMT execution model, warps, and the compute-capability limits (registers, threads, and blocks per SM).</span></li>
+      <li><a href="https://docs.nvidia.com/cuda/cuda-programming-guide/index.html" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a> — <span>the SIMT execution model, warps, and the compute-capability limits (registers, threads, and blocks per SM).</span></li>
       <li><a href="https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/" target="_blank" rel="noopener">NVIDIA Hopper Architecture In-Depth</a> — <span>H100 SM count (132), 128 FP32 cores per SM, and the HBM3 memory system.</span></li>
       <li><a href="https://www.nvidia.com/en-us/data-center/a100/" target="_blank" rel="noopener">NVIDIA A100 Tensor Core GPU</a> — <span>the 19.5 TFLOPS FP32 throughput figure.</span></li>
       <li><a href="https://shop.elsevier.com/books/programming-massively-parallel-processors/hwu/978-0-323-91231-0" target="_blank" rel="noopener">Hwu, Kirk &amp; El Hajj, <i>Programming Massively Parallel Processors</i> (4th ed.)</a> — <span>the foundational textbook for the GPU programming model.</span></li>
