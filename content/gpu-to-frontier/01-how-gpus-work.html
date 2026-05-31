@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How GPUs Work — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">Visual Explainer</div>
+    <h1>How GPUs Actually Work</h1>
+    <p class="sub">A plain-language, visual tour of GPU architecture and how code runs on them — built for programmers who know CPUs but not GPUs.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#cpu-gpu">1 · CPU vs GPU</a>
+      <a href="#arch">2 · Architecture</a>
+      <a href="#memory">3 · Memory</a>
+      <a href="#exec">4 · Running code</a>
+      <a href="#cuda">5 · CUDA code</a>
+      <a href="#warps">6 · Warps</a>
+      <a href="#diverge">7 · Divergence</a>
+      <a href="#coalesce">8 · Coalescing</a>
+      <a href="#occ">9 · Occupancy</a>
+      <a href="#ai">10 · Why AI uses GPUs</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from NVIDIA's official documentation, the Hwu et&nbsp;al. textbook, and other primers — with all specs verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <!-- start -->
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: from a loop to a million threads</h2>
+    <div class="plain"><b>In plain words:</b> a GPU runs your loop by doing every step at the same time, instead of one after another.</div>
+    <p>You've written this a hundred times. Add two arrays element by element:</p>
+
+    <div class="codecard" style="max-width:540px">
+      <div class="head">On a CPU <span class="where">the way you'd write it today</span></div>
+<pre class="code"><span class="kw">for</span> (<span class="ty">int</span> i = <span class="nm">0</span>; i &lt; N; i++)
+    C[i] = A[i] + B[i];</pre>
+    </div>
+
+    <p>For <code>N = 1,000,000</code> this runs <b>one iteration at a time</b> — a million trips through the loop, in order. Even at billions of instructions per second, <code>C[i]</code> can't start until <code>C[i-1]</code> is done.</p>
+
+    <p>Now look hard at the loop body. Iteration 5 never reads anything iteration 4 wrote. <b>Every iteration is completely independent.</b> They only run in sequence because a single CPU core executes a single stream of instructions. The ordering is a fact about the <em>hardware</em> — not about the <em>problem</em>.</p>
+
+    <div class="key"><b>The GPU's bet:</b> if the iterations don't depend on each other, why do them in order at all? Spawn <b>a million tiny workers at once</b>, give each one a single value of <code>i</code>, and let them all run simultaneously.</div>
+
+    <p>One worker is a <b>thread</b>. The loop body becomes the <b>kernel</b> — and notice the <code>for</code> vanishes entirely:</p>
+
+    <div class="codecard" style="max-width:540px">
+      <div class="head">On a GPU <span class="where">the kernel — what ONE thread runs</span></div>
+<pre class="code"><span class="ty">int</span> i = <span class="bi">blockIdx.x</span>*<span class="bi">blockDim.x</span> + <span class="bi">threadIdx.x</span>;  <span class="cm">// which i am I?</span>
+C[i] = A[i] + B[i];                          <span class="cm">// the old loop body, once</span></pre>
+    </div>
+
+    <p>There is no loop. The GPU stamps out a million copies of these two lines, each copy carrying a different <code>i</code>. That first line is just every worker asking <b>"which iteration am I responsible for?"</b> — the interactive in §5 shows exactly how the math hands each thread a unique <code>i</code>.</p>
+
+    <div class="key" style="border-left-color:var(--cpu)">
+      <b>“A million threads?!” — first, drop your CPU instincts.</b> If you already know threads from CPUs (<code>pthreads</code>, Java threads, Python <code>threading</code>), that mental model will fight you here. A GPU thread is a different animal:
+      <table class="vs">
+        <tr><th></th><th class="cpu">CPU / OS thread</th><th class="gpu">GPU thread</th></tr>
+        <tr><td>How many</td><td>a handful (dozens)</td><td>thousands to millions</td></tr>
+        <tr><td>Scheduled by</td><td>the operating system</td><td>the GPU hardware itself</td></tr>
+        <tr><td>Cost to switch</td><td>expensive — save/restore state to memory</td><td>free — each thread keeps its own registers (see §6)</td></tr>
+        <tr><td>You create them</td><td>sparingly, on purpose</td><td>by the million — one per data item, and that's the point</td></tr>
+        <tr><td>Mental model</td><td>“expensive worker — share it carefully”</td><td>“disposable worker — one per element”</td></tr>
+      </table>
+      So when we say <em>a million threads</em>, picture a million tiny disposable workers — not a million operating-system threads. That difference <em>is</em> the GPU.
+    </div>
+
+    <p><b>That single move — turn the loop body into one thread per iteration — is the entire idea.</b> Everything else on this page exists to answer one engineering question:</p>
+
+    <p style="text-align:center;font-size:1.06rem;color:var(--accent);font-weight:700;margin:18px 0">How do you actually run a million threads on a chip that doesn't have a million cores?</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px">
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px"><b>A million won't fit at once.</b><br><span class="muted">→ Group threads into <b>blocks</b>, hand each block to one <b>SM</b>, queue the rest. <span style="color:var(--accent)">§2, §4</span></span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px"><b>True independence costs silicon.</b><br><span class="muted">→ Run threads in lockstep bundles of 32 (<b>warps</b>) that share one instruction decoder. <span style="color:var(--accent)">§6</span></span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px"><b>Threads keep waiting on memory.</b><br><span class="muted">→ Keep thousands <b>resident</b> and swap between them for free, so the math units never idle. <span style="color:var(--accent)">§6, §7</span></span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px"><b>Memory is far and slow.</b><br><span class="muted">→ A <b>hierarchy</b> from tiny-fast to huge-slow, plus code that keeps hot data close. <span style="color:var(--accent)">§3</span></span></div>
+    </div>
+
+    <p class="muted" style="margin-top:15px">Read the rest as <em>answers to that question</em>, not a list of terms to memorize.</p>
+  </section>
+
+  <!-- 1 -->
+  <section id="cpu-gpu">
+    <h2><span class="num">1</span> CPU vs GPU: two different goals</h2>
+    <div class="plain"><b>In plain words:</b> a CPU is a few fast workers; a GPU is thousands of slower ones. For one quick job the CPU wins; for a mountain of identical jobs, thousands of hands win.</div>
+    <p>The core difference isn't speed — it's <b>what they optimize for</b>. A <span class="tl">CPU</span> is built to finish one task as fast as possible (low <em>latency</em>). A <span class="tg">GPU</span> is built to finish a huge number of tasks at once (high <em>throughput</em>), even if each one is a little slower.</p>
+
+    <div class="analogy"><b>Analogy:</b> A CPU is a <b>sports car</b> — gets one passenger across town fast. A GPU is a <b>fleet of buses</b> — each bus is slower, but together they move thousands of people. For adding two numbers, take the sports car. For adding a billion pairs of numbers, take the buses.</div>
+
+    <p class="muted">This shows up in the chip layout. CPUs spend silicon on caches and control logic to keep one thread sprinting. GPUs spend it on raw arithmetic units (ALUs):</p>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="chip">
+        <h4 class="tl">CPU</h4>
+        <div class="tag">Few powerful cores · lots of cache &amp; control</div>
+        <div class="cells cpu-cells">
+          <!-- mix: ALUs + big cache + control -->
+          <div class="cell alu-cpu"></div><div class="cell alu-cpu"></div><div class="cell ctrl"></div><div class="cell ctrl"></div>
+          <div class="cell cache"></div><div class="cell cache"></div><div class="cell cache"></div><div class="cell cache"></div>
+          <div class="cell cache"></div><div class="cell cache"></div><div class="cell cache"></div><div class="cell cache"></div>
+        </div>
+      </div>
+      <div class="chip">
+        <h4 class="tg">GPU</h4>
+        <div class="tag">Thousands of small cores · tiny cache &amp; control</div>
+        <div class="cells gpu-cells" id="gpuCells"></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--cpu)"></i> ALU — CPU (few)</span>
+      <span><i class="alu"></i> ALU — GPU (many)</span>
+      <span><i class="ctrl"></i> Control</span>
+      <span><i style="background:#1f6feb"></i> Cache</span>
+    </div>
+    <p class="muted" style="font-size:.82rem;margin-top:8px">Both orange and green squares are ALUs (the parts that do math) — colored per chip just to tell them apart. Notice the CPU has only a couple, ringed by cache and control; the GPU is almost wall-to-wall ALUs.</p>
+
+    <div class="key"><b>By the numbers:</b> An Nvidia A100 delivers ~19.5 TFLOPS at 32-bit precision; a 24-core Intel CPU around 0.66 TFLOPS (2021 figures). That's roughly a <b>30× throughput gap</b> — and it keeps widening.</div>
+
+    <p class="muted" style="margin-top:14px">Concretely, in clock cycles: an add costs a handful of cycles; a read from main memory can cost <b>hundreds</b>. A CPU spends most of its transistors on caches and branch prediction so its one thread rarely has to wait that long. A GPU does the opposite — it keeps thousands of threads in flight, so the instant one stalls on memory, another is ready to run. It trades <em>per-task</em> speed for hardware that's <em>never idle</em>.</p>
+  </section>
+
+  <!-- 2 -->
+  <section id="arch">
+    <h2><span class="num">2</span> The architecture: SMs and cores</h2>
+    <div class="plain"><b>In plain words:</b> a GPU is a bunch of mini-processors (called SMs) bolted together, each with its own little crew of cores.</div>
+    <p>A GPU is an array of <b>Streaming Multiprocessors (SMs)</b>. Each SM packs many cores plus its own shared memory, schedulers, and special units (like tensor cores). The Nvidia H100 (SXM5) has <b>132 SMs, each with 128 FP32 cores — about 16,896 cores</b>. <span class="muted">(You'll sometimes see “8,448” quoted; that's counting the 64 <em>FP64</em> cores per SM instead — same chip, different unit.)</span></p>
+
+    <div class="analogy"><b>Analogy:</b> Think of the GPU as a <b>factory</b>. Each SM is a <b>workshop</b> with its own crew of workers (cores), a shared workbench (shared memory), and a foreman (scheduler). The factory runs many workshops in parallel.</div>
+
+    <div style="margin-top:8px">
+      <div class="lbl" style="color:var(--accent)">GPU (factory)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:6px" id="smGrid"></div>
+    </div>
+    <p class="muted" style="margin-top:12px">Each SM is independent. More SMs = more work in parallel, which is why GPU generations keep adding them.</p>
+  </section>
+
+  <!-- 3 -->
+  <section id="memory">
+    <h2><span class="num">3</span> The memory hierarchy</h2>
+    <div class="plain"><b>In plain words:</b> close memory is fast but tiny; far memory is huge but slow. Fast code keeps the data it's using close.</div>
+    <p>GPUs have layers of memory trading <b>speed for size</b>. Small + fast sits close to the cores; big + slow sits far away. Good GPU code keeps data in the fast layers as long as possible. <span class="muted">(Hover a row.)</span></p>
+
+    <div id="memHier"></div>
+
+    <div class="key"><b>The key trick:</b> The H100's global memory is huge (80&nbsp;GB of HBM3) and has enormous bandwidth (~3.35&nbsp;TB/s) but high <em>latency</em> — a single read can cost hundreds of cycles versus ~1 for a register. GPUs hide that delay by having thousands of threads ready, so there's always other work to run while some wait on memory.</div>
+
+    <div class="analogy"><b>Analogy:</b> Registers are the tools in your hand. Shared memory is your workbench. Global memory is the warehouse across the yard — lots of stock, but a long walk. You batch your warehouse trips and keep what you need on the bench.</div>
+  </section>
+
+  <!-- 4 -->
+  <section id="exec">
+    <h2><span class="num">4</span> How code actually runs: grids, blocks, threads</h2>
+    <div class="plain"><b>In plain words:</b> you write the work for ONE item, and the GPU runs thousands of copies — organized into a tidy threads-in-blocks-in-a-grid hierarchy.</div>
+    <p>You write a <b>kernel</b> — a small function (like "add element i of vector A to element i of vector B") that runs on the GPU. You then launch it across a small army of threads, organized in a hierarchy:</p>
+
+    <div class="hier">
+      <div class="gridbox">
+        <span class="lbl">Grid (whole launch)</span>
+        <div class="blocks">
+          <div class="block"><span class="lbl">Block</span><div class="threads" data-n="32"></div></div>
+          <div class="block"><span class="lbl">Block</span><div class="threads" data-n="32"></div></div>
+          <div class="block"><span class="lbl">Block</span><div class="threads" data-n="32"></div></div>
+          <div class="block"><span class="lbl">Block</span><div class="threads" data-n="32"></div></div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <p style="margin-top:0"><b style="color:var(--purple)">Thread</b> — does the work for one data element.</p>
+        <p><b style="color:var(--green)">Block</b> — a group of threads that run together on one SM and can share its fast shared memory.</p>
+        <p><b style="color:var(--accent)">Grid</b> — all the blocks for one kernel launch.</p>
+        <div class="analogy" style="margin-top:10px"><b>Analogy:</b> A grid is the whole <b>job</b>, a block is a <b>team</b> assigned to one workshop (SM), and a thread is a single <b>worker</b>.</div>
+      </div>
+    </div>
+
+    <h3>The lifecycle of a kernel launch</h3>
+    <ol class="muted">
+      <li><b style="color:var(--ink)">Copy in</b> — move input data from CPU (host) memory to GPU (device) global memory.</li>
+      <li><b style="color:var(--ink)">Schedule blocks</b> — the GPU assigns blocks to SMs. All threads of a block stay on the same SM. Extra blocks wait in line for a slot.</li>
+      <li><b style="color:var(--ink)">Execute in warps</b> — each SM runs threads in groups of 32 (see below).</li>
+      <li><b style="color:var(--ink)">Copy out</b> — move results from GPU memory back to the CPU.</li>
+    </ol>
+  </section>
+
+  <!-- 5: CUDA -->
+  <section id="cuda">
+    <h2><span class="num">5</span> What the code actually looks like (CUDA)</h2>
+    <div class="plain"><b>In plain words:</b> GPU code is just C with a few extra bits. You write one thread's job; the <code>&lt;&lt;&lt; &gt;&gt;&gt;</code> syntax fires off thousands of copies.</div>
+    <p><b>CUDA</b> is Nvidia's way of writing GPU programs — basically C/C++ with a few extra keywords. A program splits in two: <b>host code</b> runs on the CPU and orchestrates everything; <b>device code</b> is the kernel that runs on the GPU. Here's the full vector-addition example the article mentions but skips.</p>
+
+    <div class="codewrap">
+      <div class="codecard">
+        <div class="head">Host code <span class="where">runs on the CPU</span></div>
+<pre class="code"><span class="ty">int</span> n = 1 &lt;&lt; 20;          <span class="cm">// ~1M elements</span>
+<span class="ty">size_t</span> bytes = n * <span class="kw">sizeof</span>(<span class="ty">float</span>);
+
+<span class="cm">// CPU arrays h_A, h_B filled with data…</span>
+<span class="ty">float</span> *d_A, *d_B, *d_C;     <span class="cm">// GPU pointers</span>
+
+<span class="cm">// 1 · allocate memory ON the GPU</span>
+<span class="fn">cudaMalloc</span>(&amp;d_A, bytes);
+<span class="fn">cudaMalloc</span>(&amp;d_B, bytes);
+<span class="fn">cudaMalloc</span>(&amp;d_C, bytes);
+
+<span class="cm">// 2 · copy inputs CPU → GPU</span>
+<span class="fn">cudaMemcpy</span>(d_A, h_A, bytes, <span class="bi">cudaMemcpyHostToDevice</span>);
+<span class="fn">cudaMemcpy</span>(d_B, h_B, bytes, <span class="bi">cudaMemcpyHostToDevice</span>);
+
+<span class="cm">// 3 · launch the kernel as a GRID</span>
+<span class="ty">int</span> threads = <span class="nm">256</span>;          <span class="cm">// per block</span>
+<span class="ty">int</span> blocks  = (n + threads - <span class="nm">1</span>) / threads;
+<span class="fn">vecAdd</span><span class="kw">&lt;&lt;&lt;</span>blocks, threads<span class="kw">&gt;&gt;&gt;</span>(d_A, d_B, d_C, n);
+
+<span class="cm">// 4 · copy result GPU → CPU</span>
+<span class="fn">cudaMemcpy</span>(h_C, d_C, bytes, <span class="bi">cudaMemcpyDeviceToHost</span>);
+
+<span class="cm">// 5 · free GPU memory</span>
+<span class="fn">cudaFree</span>(d_A); <span class="fn">cudaFree</span>(d_B); <span class="fn">cudaFree</span>(d_C);</pre>
+      </div>
+
+      <div class="codecard">
+        <div class="head">Device code (the kernel) <span class="where">runs on the GPU</span></div>
+<pre class="code"><span class="kw">__global__</span> <span class="ty">void</span> <span class="fn">vecAdd</span>(<span class="kw">const</span> <span class="ty">float</span> *A,
+                       <span class="kw">const</span> <span class="ty">float</span> *B,
+                       <span class="ty">float</span> *C, <span class="ty">int</span> n)
+{
+    <span class="cm">// which element is THIS thread responsible for?</span>
+    <span class="ty">int</span> i = <span class="bi">blockIdx.x</span> * <span class="bi">blockDim.x</span>
+          + <span class="bi">threadIdx.x</span>;
+
+    <span class="cm">// guard: last block may overshoot n</span>
+    <span class="kw">if</span> (i &lt; n)
+        C[i] = A[i] + B[i];   <span class="cm">// one add, that's it</span>
+}</pre>
+        <ul class="ann">
+          <li><code class="bi">__global__</code> marks a function that <b>runs on the GPU but is called from the CPU</b>.</li>
+          <li><code class="kw">&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code> is the <b>launch configuration</b> — it defines the grid (how many blocks, how many threads each).</li>
+          <li>The kernel is written from <b>one thread's point of view</b>. You don't write a loop over the array — you write what a single thread does, and the GPU runs it across thousands of threads.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="key"><b>The launch chevrons</b> <code>&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code> are the whole point: in one line you spawn <code>blocks × threads</code> copies of the kernel. With 1M elements and 256 threads/block, that's 4,096 blocks running the same 3-line function.</div>
+
+    <h3>The one line everyone trips on</h3>
+    <p>Every thread runs the <em>same</em> code, so how does each one work on a <em>different</em> array element? It computes a unique <b>global index</b> from its coordinates:</p>
+
+    <div class="ixv">
+      <div class="ixv-controls">
+        <div class="grp">
+          <span class="lab">blockIdx.x (which block)</span>
+          <div class="stepper"><button data-ix="b" data-d="-1">−</button><span class="v" id="bVal">1</span><button data-ix="b" data-d="1">+</button></div>
+        </div>
+        <div class="grp">
+          <span class="lab">threadIdx.x (which thread in block)</span>
+          <div class="stepper"><button data-ix="t" data-d="-1">−</button><span class="v" id="tVal">2</span><button data-ix="t" data-d="1">+</button></div>
+        </div>
+        <div class="grp">
+          <span class="lab">blockDim.x (threads per block)</span>
+          <div class="stepper"><span class="v" style="color:var(--accent)">4</span></div>
+        </div>
+      </div>
+      <div class="formula" id="ixFormula"></div>
+      <div class="arr" id="ixArr"></div>
+      <div class="arrlabel">Each colored underline = one block of 4 threads. The amber cell is the element this thread reads and writes.</div>
+    </div>
+    <p class="muted" style="margin-top:12px">Change the block or thread and watch the index move. This is exactly how the GPU spreads one kernel across an entire array — no loop required.</p>
+  </section>
+
+  <!-- 6 -->
+  <section id="warps">
+    <h2><span class="num">6</span> Warps: 32 threads in lockstep</h2>
+    <div class="plain"><b>In plain words:</b> the GPU runs threads in packs of 32 that all perform the same step at the same moment.</div>
+    <p>Inside an SM, threads are executed in fixed groups of <b>32 called a warp</b>. Every thread in a warp runs the <b>same instruction at the same time</b>, just on different data. This is called <b>SIMT</b> (Single Instruction, Multiple Threads).</p>
+
+    <div class="analogy"><b>Analogy:</b> A warp is a <b>rowing crew of 32</b>. The coxswain calls one stroke and everyone pulls together — same action, different oar.</div>
+
+    <p class="muted">This connects back to blocks: the block size you chose in the code is just <b>split into warps of 32</b>. A 256-thread block becomes 8 warps; 1,024 threads becomes 32 warps. That's why block sizes are almost always multiples of 32 — anything else wastes lanes in the last warp.</p>
+
+    <h3>Why high latency doesn't hurt: warp swapping</h3>
+    <p>When a warp has to wait (e.g. for slow memory), the SM doesn't sit idle — it instantly switches to another warp that's ready to run. Because each thread keeps its own registers, switching costs <b>nothing</b> (unlike a CPU context switch). The compute units stay busy.</p>
+
+    <div class="warp-stage">
+      <div class="warp"><span class="wlbl">Warp A</span><div class="lanes" data-warp="A"></div></div>
+      <div class="warp"><span class="wlbl">Warp B</span><div class="lanes" data-warp="B"></div></div>
+      <div class="warp"><span class="wlbl">Warp C</span><div class="lanes" data-warp="C"></div></div>
+      <div class="warp"><span class="wlbl">Warp D</span><div class="lanes" data-warp="D"></div></div>
+      <button class="btn" id="warpBtn">▶ Play scheduling</button>
+      <div class="status" id="warpStatus">Green = running · Amber = waiting on memory · Grey = idle slot. Watch the SM keep a warp running at all times.</div>
+    </div>
+  </section>
+
+  <!-- 7: divergence -->
+  <section id="diverge">
+    <h2><span class="num">7</span> Warp divergence: when the 32 disagree</h2>
+    <div class="plain"><b>In plain words:</b> if threads in a pack of 32 hit an <code>if/else</code> and don't all go the same way, the pack has to do both sides one after the other — so it takes twice as long.</div>
+    <p>Remember our kernel had an <code>if (i &lt; n)</code>. Here's the catch with running 32 threads in lockstep: they all share <b>one instruction at a time</b>. So what happens when a branch sends some threads one way and the rest another?</p>
+    <p>The hardware can't run two different instructions at once. So it runs the <code>if</code> threads first — the others sit idle — then runs the <code>else</code> threads while the first group sits idle. <b>Both paths happen back-to-back.</b> The warp takes as long as branch A <em>plus</em> branch B. This is <b>warp divergence</b>.</p>
+
+    <div class="stage">
+      <div class="toggle">
+        <button id="divSame" class="on">All 32 agree</button>
+        <button id="divSplit">Threads diverge</button>
+      </div>
+      <div id="divTimeline" style="margin-top:14px"></div>
+      <div class="cost" id="divCost"></div>
+    </div>
+
+    <div class="key"><b>The takeaway:</b> a branch only costs you when threads <em>in the same warp</em> split on it. Our <code>if (i &lt; n)</code> is cheap — only the last warp has a few threads past the end. But something like <code>if (data[i] &gt; 0)</code>, where the answer varies thread-by-thread, can split every warp and roughly halve your speed. Good GPU code tries to keep neighbouring threads on the same path.</div>
+  </section>
+
+  <!-- 8: coalescing -->
+  <section id="coalesce">
+    <h2><span class="num">8</span> Memory coalescing: read together, read fast</h2>
+    <div class="plain"><b>In plain words:</b> if 32 neighbouring threads read 32 neighbouring slots of memory, the GPU grabs them all in one trip. Spread those reads out, and it needs a separate trip for each.</div>
+    <p>Global memory isn't delivered one value at a time — it arrives in <b>fixed-size chunks</b> (think: a whole shelf, not a single item). When the 32 threads of a warp request 32 <em>consecutive</em> addresses, they all live on the same chunk, so the GPU fetches it in <b>one transaction</b>. That's <b>coalesced</b> access.</p>
+    <p>If those same 32 threads request <em>scattered</em> or strided addresses, each lands on a different chunk. Now the GPU does many transactions and throws away most of every chunk it fetched — same amount of data wanted, many times slower.</p>
+
+    <div class="stage">
+      <div class="toggle">
+        <button id="coalGood" class="on">Coalesced (thread i → element i)</button>
+        <button id="coalBad">Strided (thread i → element i×4)</button>
+      </div>
+      <div class="twrap" id="coalThreads"></div>
+      <div class="mgrid" id="coalMem"></div>
+      <div class="seglabel"><span>chunk 0</span><span>chunk 1</span><span>chunk 2</span><span>chunk 3</span></div>
+      <div class="cost" id="coalCost"></div>
+    </div>
+
+    <div class="key"><b>The rule of thumb:</b> let thread <code>i</code> touch element <code>i</code> — exactly what our vector add does. Neighbouring threads → neighbouring memory → fewer, fuller transactions. This single habit is often the biggest difference between fast and slow real-world kernels.</div>
+  </section>
+
+  <!-- 9 -->
+  <section id="occ">
+    <h2><span class="num">9</span> Occupancy: keeping the SM full</h2>
+    <div class="plain"><b>In plain words:</b> keep each mini-processor packed with threads, so there's always something ready to run while others wait on memory.</div>
+    <p><b>Occupancy</b> is how full an SM is: the warps it's actually running divided by the most it could hold. The fuller it is, the more warps it can swap between to hide latency. But each SM has fixed budgets — <b>registers, shared memory, and slots for threads and blocks</b>. Your kernel's needs get carved out of those budgets, and whichever one runs out first caps how many threads fit. Ask for too much per thread, and fewer threads run at once.</p>
+
+    <div class="analogy"><b>Analogy:</b> The SM is a <b>parking garage</b> with fixed spaces. If every car (thread) demands two spaces' worth of registers, only half as many park — half occupancy.</div>
+
+    <p class="muted" style="margin-top:14px">Try it: an H100 SM has 65,536 registers and room for 2,048 threads. Drag to see how registers-per-thread caps how many threads fit.</p>
+
+    <div class="occ-controls">
+      <label>Registers per thread: <b id="regVal" style="color:var(--accent)">32</b>
+        <input type="range" id="regSlider" min="16" max="128" step="16" value="32">
+      </label>
+    </div>
+    <div class="occ-bar-outer"><div class="occ-bar-inner" id="occBar">100%</div></div>
+    <div class="occ-note" id="occNote"></div>
+
+    <div class="key"><b>The tension:</b> giving each thread more registers can make individual threads faster — but lowers occupancy, leaving the SM with fewer warps to hide latency. Tuning that trade-off is much of the art of GPU optimization.</div>
+  </section>
+
+  <!-- 10: AI/ML -->
+  <section id="ai">
+    <h2><span class="num">10</span> Why AI runs on GPUs</h2>
+    <div class="plain"><b>In plain words:</b> training AI is mostly giant multiplication tables — millions of tiny, independent sums. That's exactly the kind of work GPUs eat for breakfast.</div>
+    <p>Here's the payoff for everything above. Training and running a neural network is, underneath, mostly <b>matrix multiplication</b>. And a matrix multiply is built from <b>dot products</b>: every cell of the result is a row of one matrix dotted with a column of the other — and <b>each result cell is completely independent of the others.</b></p>
+    <p>Sound familiar? That's the same "independent iterations" idea from the very first section. A 1000×1000 output is a million independent dot products → a million threads. Click any output cell to see the one row and column that produce it:</p>
+
+    <div class="mm">
+      <div class="mat amat" id="matA"></div>
+      <div class="mmop">×</div>
+      <div class="mat bmat" id="matB"></div>
+      <div class="mmop">=</div>
+      <div class="mat cmat" id="matC"></div>
+    </div>
+    <div class="status" id="mmStatus" style="text-align:center">Click a cell in the green result matrix.</div>
+
+    <p style="margin-top:16px">On top of this, modern GPUs add <b>tensor cores</b>: dedicated units that multiply a small matrix in a single operation — precisely the inner step of deep learning. So the traits that make a GPU great at adding two vectors (mountains of independent arithmetic, latency hidden behind thousands of threads) are exactly what make it the engine of modern AI.</p>
+
+    <div class="key"><b>Full circle:</b> "GPU for AI" isn't magic — it's that neural networks are enormous piles of independent multiply-adds, and a GPU is a machine built to do enormous piles of independent arithmetic.</div>
+  </section>
+
+  <!-- recap -->
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>A GPU is a <b>factory of SMs</b> (workshops), each packed with cores. You write a <b>kernel</b> — the instructions for one worker — and launch a <b>grid</b> of threads with <code>&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code>. Each thread computes its own <b>global index</b> (<code>blockIdx·blockDim + threadIdx</code>) to find the data it owns. Threads are grouped into <b>blocks</b> assigned to single SMs, then run 32-at-a-time as <b>warps</b>, all executing the same instruction on different data (<b>SIMT</b>). Memory is layered from instant <b>registers</b> up to a huge-but-distant <b>global memory</b>, and the GPU hides that distance by instantly swapping to another ready warp whenever one waits — for free, because every thread keeps its own registers. How full you keep each SM with warps is <b>occupancy</b>, and balancing it against register and memory limits is most of GPU performance work.</p>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px">
+      <span class="pill">CPU = latency</span><span class="pill">GPU = throughput</span><span class="pill">SM = workshop</span>
+      <span class="pill">grid → block → warp → thread</span><span class="pill">kernel = one thread's job</span>
+      <span class="pill">i = blockIdx·blockDim + threadIdx</span><span class="pill">warp = 32 threads</span>
+      <span class="pill">free warp swaps hide latency</span><span class="pill">occupancy = SM fullness</span>
+      <span class="pill">split if/else = divergence (slow)</span><span class="pill">neighbour threads → neighbour memory</span>
+      <span class="pill">AI = piles of independent matrix math</span>
+    </div>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Every spec and concept here was checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/" target="_blank" rel="noopener">NVIDIA CUDA C++ Programming Guide</a> — <span>the SIMT execution model, warps, and the compute-capability limits (registers, threads, and blocks per SM).</span></li>
+      <li><a href="https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/" target="_blank" rel="noopener">NVIDIA Hopper Architecture In-Depth</a> — <span>H100 SM count (132), 128 FP32 cores per SM, and the HBM3 memory system.</span></li>
+      <li><a href="https://www.nvidia.com/en-us/data-center/a100/" target="_blank" rel="noopener">NVIDIA A100 Tensor Core GPU</a> — <span>the 19.5 TFLOPS FP32 throughput figure.</span></li>
+      <li><a href="https://shop.elsevier.com/books/programming-massively-parallel-processors/hwu/978-0-323-91231-0" target="_blank" rel="noopener">Hwu, Kirk &amp; El Hajj, <i>Programming Massively Parallel Processors</i> (4th ed.)</a> — <span>the foundational textbook for the GPU programming model.</span></li>
+      <li><a href="https://arxiv.org/abs/1804.06826" target="_blank" rel="noopener">Jia et al., "Dissecting the NVIDIA Volta GPU via Microbenchmarking"</a> — <span>source for the approximate memory-latency figures (registers → global).</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers &amp; talks that inspired this one</b> — all worth your time:</p>
+    <ul class="refs">
+      <li><a href="https://blog.codingconfessions.com/p/gpu-computing" target="_blank" rel="noopener">Abhinav Upadhyay, "What Every Developer Should Know About GPU Computing"</a> <span>(Confessions of a Code Addict) — the primer that sparked this explainer.</span></li>
+      <li><a href="https://www.youtube.com/watch?v=3l10o0DYJXg" target="_blank" rel="noopener">"How GPU Computing Works"</a> <span>— Stephen Jones's NVIDIA GTC talk.</span></li>
+      <li><a href="https://siboehm.com/articles/22/CUDA-MMM" target="_blank" rel="noopener">Simon Boehm, "How to Optimize a CUDA Matmul Kernel"</a> <span>— a deep dive on tiling and coalescing.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> · part of the <b style="color:var(--ink)">Explainers</b> series. <span style="opacity:.7">&lt;!-- edit this byline / series name to taste --&gt;</span></p>
+  </footer>
+</div>
+
+<!-- Glossary drawer -->
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms… (e.g. warp, register)">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  // GPU cells: mostly ALUs, a few control, a strip of cache
+  var g=document.getElementById('gpuCells');
+  for(var i=0;i<96;i++){
+    var d=document.createElement('div');
+    d.className='cell '+(i<6?'ctrl':(i>=90?'cache':'alu'));
+    g.appendChild(d);
+  }
+  // SM grid (factory of workshops)
+  var sm=document.getElementById('smGrid');
+  for(var s=0;s<12;s++){
+    var box=document.createElement('div');
+    box.style.cssText='border:1px solid var(--line);border-radius:8px;padding:7px;background:#0b1019';
+    var lbl=document.createElement('div'); lbl.className='lbl'; lbl.style.color='var(--green)'; lbl.textContent='SM';
+    var cores=document.createElement('div'); cores.style.cssText='display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin-top:4px';
+    for(var c=0;c<16;c++){var k=document.createElement('div');k.style.cssText='width:8px;height:8px;border-radius:2px;background:var(--gpu)';cores.appendChild(k);}
+    box.appendChild(lbl); box.appendChild(cores); sm.appendChild(box);
+  }
+  // thread dots
+  document.querySelectorAll('.threads').forEach(function(t){
+    var n=+t.dataset.n;
+    for(var i=0;i<n;i++){var d=document.createElement('div');d.className='thread';t.appendChild(d);}
+  });
+  // memory hierarchy rows
+  var mem=[
+    {n:'Registers',d:'Private to each thread',w:18,c:'#3fb950',s:'~1 cycle · tiny'},
+    {n:'Shared memory / L1',d:'Shared within a block · on-chip SRAM',w:30,c:'#58a6ff',s:'~20–30 cycles · small'},
+    {n:'L2 cache',d:'Shared by all SMs · auto-managed',w:48,c:'#bc8cff',s:'~200 cycles · medium'},
+    {n:'Global memory (HBM)',d:'Off-chip DRAM · 80 GB on H100',w:100,c:'#d29922',s:'~400–800 cycles · huge'}
+  ];
+  var mh=document.getElementById('memHier');
+  mem.forEach(function(m){
+    var row=document.createElement('div'); row.className='mem-row';
+    row.innerHTML='<div class="mem-bar" style="width:'+(m.w/2+10)+'px;background:'+m.c+'"></div>'+
+      '<div class="mem-meta"><b>'+m.n+'</b><span>'+m.d+'</span></div>'+
+      '<div class="speed">'+m.s+'</div>';
+    mh.appendChild(row);
+  });
+
+  // Warp lanes
+  ['A','B','C','D'].forEach(function(w){
+    var el=document.querySelector('.lanes[data-warp="'+w+'"]');
+    el.style.display='flex'; el.style.gap='3px';
+    for(var i=0;i<16;i++){var l=document.createElement('div');l.className='lane';el.appendChild(l);}
+  });
+  var warps=['A','B','C','D'];
+  var warpEls={}; warps.forEach(function(w){warpEls[w]=document.querySelectorAll('.lanes[data-warp="'+w+'"] .lane');});
+  var status=document.getElementById('warpStatus');
+  var seq=[
+    {run:'A',wait:[], msg:'Warp A is running on the cores.'},
+    {run:'A',wait:[], msg:'Warp A issues a slow memory load…'},
+    {run:'B',wait:['A'], msg:'A is waiting → SM instantly swaps to Warp B. No idle time.'},
+    {run:'C',wait:['A','B'], msg:'B now waits too → swap to Warp C.'},
+    {run:'D',wait:['A','B','C'], msg:'And on to Warp D. The cores never stall.'},
+    {run:'A',wait:['C','D'], msg:'A’s data arrived → A runs again. Latency fully hidden.'}
+  ];
+  function paint(step){
+    warps.forEach(function(w){
+      var cls = w===step.run ? 'run' : (step.wait.indexOf(w)>=0 ? 'wait' : '');
+      warpEls[w].forEach(function(l){l.className='lane'+(cls?' '+cls:'');});
+    });
+    status.textContent=step.msg;
+  }
+  var idx=0, timer=null;
+  document.getElementById('warpBtn').addEventListener('click',function(){
+    if(timer){clearInterval(timer);timer=null;this.textContent='▶ Play scheduling';return;}
+    this.textContent='⏸ Pause';
+    var btn=this;
+    paint(seq[idx]);
+    timer=setInterval(function(){
+      idx=(idx+1)%seq.length; paint(seq[idx]);
+      if(idx===seq.length-1){/* loop continues */}
+    },1300);
+  });
+
+  // Occupancy
+  var maxRegs=65536, maxThreads=2048;
+  var slider=document.getElementById('regSlider'), bar=document.getElementById('occBar'),
+      note=document.getElementById('occNote'), regVal=document.getElementById('regVal');
+  function updateOcc(){
+    var r=+slider.value; regVal.textContent=r;
+    var threadsFit=Math.min(maxThreads, Math.floor(maxRegs/r));
+    var occ=Math.round(threadsFit/maxThreads*100);
+    bar.style.width=occ+'%'; bar.textContent=occ+'%';
+    note.innerHTML='At <b>'+r+'</b> registers/thread, the SM fits <b>'+threadsFit.toLocaleString()+'</b> of '+maxThreads.toLocaleString()+' threads → <b>'+occ+'% occupancy</b>. '+
+      (occ>=100?'Full — maximum warps available to hide latency.':'Below full — fewer warps to swap between, so latency is harder to hide.');
+  }
+  slider.addEventListener('input',updateOcc);
+  updateOcc();
+
+  // Index visualizer: i = blockIdx.x * blockDim.x + threadIdx.x
+  var blockDim=4, nArr=16, nBlocks=nArr/blockDim;
+  var state={b:1,t:2};
+  var arr=document.getElementById('ixArr');
+  var blockColors=['#3fb950','#58a6ff','#bc8cff','#f78166'];
+  for(var c=0;c<nArr;c++){
+    var cell=document.createElement('div'); cell.className='acell'; cell.id='ac'+c;
+    cell.textContent=c;
+    cell.style.borderBottom='3px solid '+blockColors[Math.floor(c/blockDim)];
+    arr.appendChild(cell);
+  }
+  var bVal=document.getElementById('bVal'), tVal=document.getElementById('tVal'),
+      fEl=document.getElementById('ixFormula');
+  function renderIx(){
+    var i=state.b*blockDim+state.t;
+    bVal.textContent=state.b; tVal.textContent=state.t;
+    fEl.innerHTML='i = <span class="b">'+state.b+'</span> &times; <span class="d">'+blockDim+'</span> + <span class="t">'+state.t+'</span> = <span class="r">'+i+'</span>'+
+      '<br><span style="color:var(--muted);font-size:.82rem">→ this thread handles array element <b style="color:var(--amber)">C['+i+'] = A['+i+'] + B['+i+']</b></span>';
+    for(var c=0;c<nArr;c++){document.getElementById('ac'+c).className='acell';}
+    document.getElementById('ac'+i).className='acell hot';
+  }
+  document.querySelectorAll('.stepper button[data-ix]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var which=btn.dataset.ix, d=+btn.dataset.d;
+      if(which==='b') state.b=Math.max(0,Math.min(nBlocks-1,state.b+d));
+      else state.t=Math.max(0,Math.min(blockDim-1,state.t+d));
+      renderIx();
+    });
+  });
+  renderIx();
+
+  // ---- Warp divergence ----
+  var divTL=document.getElementById('divTimeline'), divCost=document.getElementById('divCost');
+  function dlanes(states){
+    var h='<div class="dlanes">';
+    states.forEach(function(s){h+='<div class="dl '+s+'"></div>';});
+    return h+'</div>';
+  }
+  function renderDiv(split){
+    var N=16;
+    if(!split){
+      var all=[]; for(var i=0;i<N;i++) all.push('a');
+      divTL.innerHTML='<div class="drow"><span class="rl">Step 1 — everyone runs</span>'+dlanes(all)+'</div>';
+      divCost.className='cost fast'; divCost.textContent='✓ 1 pass. All threads in the warp took the same branch — no penalty.';
+    } else {
+      var p1=[],p2=[];
+      for(var i=0;i<N;i++){ if(i<N/2){p1.push('a');p2.push('idle');} else {p1.push('idle');p2.push('b');} }
+      divTL.innerHTML='<div class="drow"><span class="rl">Pass 1 — the “if” threads</span>'+dlanes(p1)+'</div>'+
+                      '<div class="drow"><span class="rl">Pass 2 — the “else” threads</span>'+dlanes(p2)+'</div>';
+      divCost.className='cost slow'; divCost.textContent='⚠ 2 passes. The warp ran the “if” threads, then the “else” threads — idle lanes (faded) are wasted. ≈2× the time.';
+    }
+  }
+  var dSame=document.getElementById('divSame'), dSplit=document.getElementById('divSplit');
+  dSame.addEventListener('click',function(){dSame.classList.add('on');dSplit.classList.remove('on');renderDiv(false);});
+  dSplit.addEventListener('click',function(){dSplit.classList.add('on');dSame.classList.remove('on');renderDiv(true);});
+  renderDiv(false);
+
+  // ---- Memory coalescing ----
+  var coalThreads=document.getElementById('coalThreads'), coalMem=document.getElementById('coalMem'),
+      coalCost=document.getElementById('coalCost');
+  var NT=8, NM=32, CHUNK=8;
+  for(var t=0;t<NT;t++){var nd=document.createElement('div');nd.className='tnode';nd.textContent='T'+t;coalThreads.appendChild(nd);}
+  for(var m=0;m<NM;m++){var mc=document.createElement('div');mc.className='mc s'+Math.floor(m/CHUNK);mc.id='mc'+m;coalMem.appendChild(mc);}
+  function renderCoal(good){
+    for(var m=0;m<NM;m++){document.getElementById('mc'+m).className='mc s'+Math.floor(m/CHUNK);}
+    var chunks={};
+    for(var t=0;t<NT;t++){
+      var addr=good ? t : t*4;
+      document.getElementById('mc'+addr).className='mc s'+Math.floor(addr/CHUNK)+' hit';
+      chunks[Math.floor(addr/CHUNK)]=1;
+    }
+    var nT=Object.keys(chunks).length;
+    if(good){coalCost.className='cost fast';coalCost.textContent='✓ All 8 reads land in chunk 0 → 1 transaction. Fast.';}
+    else{coalCost.className='cost slow';coalCost.textContent='⚠ The 8 reads spread across '+nT+' chunks → '+nT+' transactions for the same 8 values. About '+nT+'× slower.';}
+  }
+  var cGood=document.getElementById('coalGood'), cBad=document.getElementById('coalBad');
+  cGood.addEventListener('click',function(){cGood.classList.add('on');cBad.classList.remove('on');renderCoal(true);});
+  cBad.addEventListener('click',function(){cBad.classList.add('on');cGood.classList.remove('on');renderCoal(false);});
+  renderCoal(true);
+
+  // ---- Matrix multiply (AI/ML) ----
+  var SZ=4;
+  function buildMat(elId){
+    var el=document.getElementById(elId);
+    el.style.gridTemplateColumns='repeat('+SZ+',auto)';
+    var cap=document.createElement('div'); cap.className='cap';
+    cap.textContent = elId==='matA' ? 'A (a row each)' : elId==='matB' ? 'B (a column each)' : 'C = result';
+    el.appendChild(cap);
+    for(var r=0;r<SZ;r++) for(var c=0;c<SZ;c++){
+      var d=document.createElement('div'); d.className='mcellm'; d.id=elId+'_'+r+'_'+c;
+      d.dataset.r=r; d.dataset.c=c; el.appendChild(d);
+    }
+  }
+  buildMat('matA'); buildMat('matB'); buildMat('matC');
+  var mmStatus=document.getElementById('mmStatus');
+  function clearMM(){
+    ['matA','matB','matC'].forEach(function(id){
+      for(var r=0;r<SZ;r++) for(var c=0;c<SZ;c++) document.getElementById(id+'_'+r+'_'+c).className='mcellm';
+    });
+  }
+  document.querySelectorAll('#matC .mcellm').forEach(function(cell){
+    cell.addEventListener('click',function(){
+      clearMM();
+      var r=+cell.dataset.r, c=+cell.dataset.c;
+      cell.className='mcellm sel';
+      for(var k=0;k<SZ;k++){
+        document.getElementById('matA_'+r+'_'+k).className='mcellm rowhi';
+        document.getElementById('matB_'+k+'_'+c).className='mcellm colhi';
+      }
+      mmStatus.innerHTML='C['+r+']['+c+'] = row '+r+' of A · column '+c+' of B = a sum of '+SZ+' products. <b style="color:var(--green)">One thread computes this, independently of every other cell.</b>';
+    });
+  });
+
+  // ---- Glossary drawer ----
+  var glossary=[
+    ['CPU','A few powerful cores built to finish one task as fast as possible (low latency).'],
+    ['GPU','Thousands of small cores built to do a huge amount of work at once (high throughput).'],
+    ['Latency','How long a single operation takes to finish. CPUs minimise this.'],
+    ['Throughput','How much total work completes per second. GPUs maximise this.'],
+    ['Clock cycle','One tick of the chip’s clock — well under a nanosecond. The basic unit of timing; an add is a few cycles, a global-memory read is hundreds.'],
+    ['FLOPS / TFLOPS','Floating-point operations per second (TFLOPS = trillions). A way to measure compute throughput.'],
+    ['ALU','Arithmetic Logic Unit — the circuit that does the actual math. GPUs pack thousands of them.'],
+    ['Core','One execution lane inside an SM; runs one thread’s arithmetic.'],
+    ['SM (Streaming Multiprocessor)','The GPU’s main building block: a cluster of cores plus shared memory and schedulers. An H100 has 132.'],
+    ['Thread','The work for one data element — the smallest unit of execution. You write the code for one thread. Far lighter than a CPU/OS thread: created by the millions, hardware-scheduled, free to switch.'],
+    ['Block (thread block)','A group of threads that run together on one SM and can share its fast memory.'],
+    ['Grid','All the blocks launched by a single kernel call.'],
+    ['Warp','A group of 32 threads that execute the same instruction at the same time (just on different data).'],
+    ['Kernel','The function you write to run on the GPU, executed by many threads at once.'],
+    ['CUDA','Nvidia’s C/C++-based way of writing GPU programs.'],
+    ['Host / Device','Host = the CPU and its memory. Device = the GPU and its memory.'],
+    ['Register','Tiny, instant, per-thread storage on the SM (~1 cycle). An H100 SM has 65,536.'],
+    ['Shared memory','Small, fast, programmer-managed memory shared within a block (~20–30 cycles).'],
+    ['Global memory (HBM)','Large off-chip GPU memory — high bandwidth but high latency (~400–800 cycles). 80 GB on an H100.'],
+    ['SIMT','Single Instruction, Multiple Threads — all threads in a warp run the same instruction on different data.'],
+    ['Occupancy','How full an SM is: active warps ÷ the max it can hold. More warps = better at hiding latency.'],
+    ['Warp divergence','When threads in a warp take different branches of an if/else, forcing the paths to run one after another (slower).'],
+    ['Memory coalescing','When a warp’s 32 threads read consecutive addresses, the hardware fetches them in one transaction instead of many.'],
+    ['Tensor core','A special unit that multiplies a small matrix in a single operation — the workhorse of deep learning.'],
+    ['blockIdx / blockDim / threadIdx','Built-in variables: which block you’re in, how big a block is, and which thread within it. Combine them for a unique global index. (The .x is for 1-D launches; grids can also be 2-D/3-D.)']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){
+    var d=document.createElement('div'); d.className='gterm';
+    d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';
+    glossList.appendChild(d);
+  });
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'),
+      gSearch=document.getElementById('glossSearch');
+  function openGloss(e){ if(e)e.preventDefault(); gPanel.classList.add('open'); gOverlay.classList.add('open'); gSearch.focus(); }
+  function closeGloss(){ gPanel.classList.remove('open'); gOverlay.classList.remove('open'); }
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink');
+  if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeGloss(); });
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){
+      el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);
+    });
+  });
+})();
+</script>
+</body>
+</html>
