@@ -191,6 +191,17 @@
   .refs{margin:6px 0 16px; padding-left:20px}
   .refs li{margin:7px 0}
   .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
 </style>
 </head>
 <body>
@@ -211,6 +222,7 @@
       <a href="#coalesce">8 · Coalescing</a>
       <a href="#occ">9 · Occupancy</a>
       <a href="#ai">10 · Why AI uses GPUs</a>
+      <a href="#beyond">11 · Beyond GPUs</a>
       <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
     </div>
     <p class="src">A synthesis from NVIDIA's official documentation, the Hwu et&nbsp;al. textbook, and other primers — with all specs verified against primary sources. <a href="#refs">Full references below.</a></p>
@@ -564,6 +576,65 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
     <div class="key"><b>Full circle:</b> "GPU for AI" isn't magic — it's that neural networks are enormous piles of independent multiply-adds, and a GPU is a machine built to do enormous piles of independent arithmetic.</div>
   </section>
 
+  <!-- 11: beyond GPUs -->
+  <section id="beyond">
+    <h2><span class="num">11</span> Beyond GPUs: TPUs &amp; other accelerators</h2>
+    <div class="plain"><b>In plain words:</b> GPUs aren't the only AI chips. TPUs and friends specialize even harder for matrix multiply — trading flexibility for more speed and efficiency.</div>
+    <p>Once you know that AI is mostly matmul (§10), every AI chip makes sense as a different bet on <b>how hard to specialize for matmul</b>. Picture a spectrum from general-purpose to single-minded — <span class="muted">(click each):</span></p>
+
+    <div class="stage">
+      <div style="max-width:400px;margin:0 auto">
+        <div style="font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>← general-purpose</span><span>specialized for matmul →</span>
+        </div>
+        <div class="toggle" style="display:flex;width:100%">
+          <button id="spCpu" style="flex:1">CPU</button>
+          <button id="spGpu" class="on" style="flex:1">GPU</button>
+          <button id="spTpu" style="flex:1">TPU / ASIC</button>
+        </div>
+      </div>
+      <div id="specOut" style="margin-top:14px"></div>
+    </div>
+
+    <p>A GPU's <b>tensor cores</b> are already a step down this road — little matmul engines bolted inside a general chip. A <b>TPU</b> is what you get if you make the <em>whole chip</em> that: it throws out general cores and hardwires a giant <b>systolic array</b> (a physical grid of multiply-accumulate units, 128×128 or 256×256, that data flows through). Less flexible than a GPU, but more matmul-per-watt. TPUs are Google's (rent them on Google Cloud; latest are v6 "Trillium" and v7 "Ironwood").</p>
+
+    <p class="muted" style="margin-top:14px">Look at where each chip spends its silicon — same idea as §1's CPU-vs-GPU layout, now with the TPU:</p>
+    <div class="chips3">
+      <div class="minichip">
+        <h4 class="tl">CPU</h4>
+        <div class="mc-cells" id="chipCpu" style="grid-template-columns:repeat(3,1fr)"></div>
+        <div class="cap">A few big cores + lots of cache</div>
+      </div>
+      <div class="minichip">
+        <h4 class="tg">GPU</h4>
+        <div class="mc-cells" id="chipGpu" style="grid-template-columns:repeat(8,1fr)"></div>
+        <div class="cap">Thousands of independent small cores</div>
+      </div>
+      <div class="minichip">
+        <h4 style="color:var(--purple)">TPU</h4>
+        <div class="mc-cells solidgrid" id="chipTpu" style="grid-template-columns:repeat(8,1fr)"></div>
+        <div class="cap">One connected matmul array — data flows straight through</div>
+      </div>
+    </div>
+    <div class="legend" style="justify-content:center">
+      <span><i style="background:var(--cpu)"></i> ALU</span>
+      <span><i class="ctrl"></i> control</span>
+      <span><i style="background:#1f6feb"></i> cache</span>
+      <span><i style="background:var(--purple)"></i> matmul array</span>
+    </div>
+
+    <h3>The broader zoo</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:6px">
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px"><b>AWS Trainium</b><br><span class="muted">Amazon's in-house chip for training <em>and</em> inference (Inferentia was folded in).</span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px"><b>Cerebras WSE</b><br><span class="muted">A single wafer-scale chip the size of a dinner plate — ~4 trillion transistors.</span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px"><b>Groq LPU</b><br><span class="muted">Built for blazing-fast inference via fully deterministic scheduling.</span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px"><b>AMD Instinct</b><br><span class="muted">The main <em>GPU</em> rival to NVIDIA.</span></div>
+      <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px"><b>Microsoft Maia · Meta MTIA</b><br><span class="muted">Hyperscalers building their own matmul ASICs in-house.</span></div>
+    </div>
+
+    <div class="key"><b>So why is NVIDIA still ~80–85% of the market?</b> Not because GPUs are unbeatable — because of <b>CUDA</b>. Two decades of AI software is written for NVIDIA GPUs, and that lock-in is stickier than any single chip's specs. The alternatives are gaining fastest in <em>inference</em>, where the software lock-in is weaker. (That software story is a thread we'll pull on later in the series.)</div>
+  </section>
+
   <!-- recap -->
   <section id="recap" style="border-color:var(--accent)">
     <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
@@ -575,6 +646,7 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
       <span class="pill">free warp swaps hide latency</span><span class="pill">occupancy = SM fullness</span>
       <span class="pill">split if/else = divergence (slow)</span><span class="pill">neighbour threads → neighbour memory</span>
       <span class="pill">AI = piles of independent matrix math</span>
+      <span class="pill">TPUs/ASICs specialize further for matmul</span>
     </div>
   </section>
 
@@ -587,6 +659,7 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
       <li><a href="https://www.nvidia.com/en-us/data-center/a100/" target="_blank" rel="noopener">NVIDIA A100 Tensor Core GPU</a> — <span>the 19.5 TFLOPS FP32 throughput figure.</span></li>
       <li><a href="https://shop.elsevier.com/books/programming-massively-parallel-processors/hwu/978-0-323-91231-0" target="_blank" rel="noopener">Hwu, Kirk &amp; El Hajj, <i>Programming Massively Parallel Processors</i> (4th ed.)</a> — <span>the foundational textbook for the GPU programming model.</span></li>
       <li><a href="https://arxiv.org/abs/1804.06826" target="_blank" rel="noopener">Jia et al., "Dissecting the NVIDIA Volta GPU via Microbenchmarking"</a> — <span>source for the approximate memory-latency figures (registers → global).</span></li>
+      <li><a href="https://docs.cloud.google.com/tpu/docs/system-architecture-tpu-vm" target="_blank" rel="noopener">Google Cloud — TPU System Architecture</a> &amp; <a href="https://en.wikipedia.org/wiki/Tensor_Processing_Unit" target="_blank" rel="noopener">TPU (Wikipedia)</a> — <span>the systolic-array design and TPU generations in §11.</span></li>
     </ul>
     <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers &amp; talks that inspired this one</b> — all worth your time:</p>
     <ul class="refs">
@@ -813,6 +886,35 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
     });
   });
 
+  // ---- Specialization spectrum (CPU / GPU / TPU) ----
+  var specData={
+    cpu:'<b class="tl">CPU</b> — a handful of big, flexible cores. Runs anything, optimized to finish one task fast. Weak at bulk matmul versus the others — but it’s still the boss that launches all the work.',
+    gpu:'<b class="tg">GPU</b> — thousands of simpler cores plus tensor cores. Gives up some flexibility for massive parallel throughput, while staying fully programmable (CUDA). The workhorse of AI today.',
+    tpu:'<b style="color:var(--purple)">TPU / ASIC</b> — no general cores at all; a giant hardwired systolic array streams data through to do matmul as if by physics. Least flexible, most matmul-per-watt. Google’s TPUs are the famous example.'
+  };
+  var specOut=document.getElementById('specOut');
+  var spBtns={cpu:document.getElementById('spCpu'),gpu:document.getElementById('spGpu'),tpu:document.getElementById('spTpu')};
+  function renderSpec(k){
+    Object.keys(spBtns).forEach(function(key){ spBtns[key].classList.toggle('on', key===k); });
+    specOut.innerHTML=specData[k];
+  }
+  if(specOut){
+    Object.keys(spBtns).forEach(function(k){ spBtns[k].addEventListener('click',function(){renderSpec(k);}); });
+    renderSpec('gpu');
+  }
+
+  // three-up chip diagram (silicon allocation)
+  function fillChip(id, classes){
+    var el=document.getElementById(id); if(!el) return;
+    classes.forEach(function(c){ var d=document.createElement('div'); d.className='cell '+c; el.appendChild(d); });
+  }
+  // CPU (3x3): 2 ALU, 2 control, 5 cache
+  fillChip('chipCpu', ['alu-cpu','alu-cpu','ctrl','ctrl','cache','cache','cache','cache','cache']);
+  // GPU (8 wide x4): mostly ALU, a strip of cache
+  (function(){ var g=[]; for(var i=0;i<32;i++) g.push(i>=30?'cache':'alu'); fillChip('chipGpu', g); })();
+  // TPU (8 wide x4): one uniform matmul array
+  (function(){ var t=[]; for(var i=0;i<32;i++) t.push('mac'); fillChip('chipTpu', t); })();
+
   // ---- Glossary drawer ----
   var glossary=[
     ['CPU','A few powerful cores built to finish one task as fast as possible (low latency).'],
@@ -839,6 +941,9 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
     ['Warp divergence','When threads in a warp take different branches of an if/else, forcing the paths to run one after another (slower).'],
     ['Memory coalescing','When a warp’s 32 threads read consecutive addresses, the hardware fetches them in one transaction instead of many.'],
     ['Tensor core','A special unit that multiplies a small matrix in a single operation — the workhorse of deep learning.'],
+    ['ASIC','Application-Specific Integrated Circuit — a chip hardwired for one job (e.g. matmul). Faster and more efficient at that job than a general chip, but inflexible.'],
+    ['TPU (Tensor Processing Unit)','Google’s matmul-specialized ASIC, built around a systolic array. Not sold — rented via Google Cloud. Latest: v6 Trillium, v7 Ironwood.'],
+    ['Systolic array','A hardwired grid of multiply-accumulate units that data flows through, computing matrix multiply extremely efficiently — the heart of a TPU.'],
     ['blockIdx / blockDim / threadIdx','Built-in variables: which block you’re in, how big a block is, and which thread within it. Combine them for a unique global index. (The .x is for 1-D launches; grids can also be 2-D/3-D.)']
   ];
   var glossList=document.getElementById('glossList');
