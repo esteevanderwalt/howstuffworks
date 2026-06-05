@@ -348,6 +348,8 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
 
     <div id="memHier"></div>
 
+    <p class="muted" style="margin-top:14px"><b style="color:var(--ink)">What's a register?</b> The top row, and the one to really understand. A <b>register</b> is where a thread keeps the values it's working on right now — the loop index, the numbers it just loaded, a running sum. Your kernel's local variables literally <em>become</em> registers. They're the fastest storage there is and <b>private to each thread</b>, which is why a sleeping warp can leave its values sitting untouched (§6) — and why how many a thread needs caps how many threads fit on an SM (§9).</p>
+
     <div class="key"><b>The key trick:</b> The H100's global memory is huge (80&nbsp;GB of HBM3) and has enormous bandwidth (~3.35&nbsp;TB/s) but high <em>latency</em> — a single read can cost hundreds of cycles versus ~1 for a register. GPUs hide that delay by having thousands of threads ready, so there's always other work to run while some wait on memory.</div>
 
     <div class="analogy"><b>Analogy:</b> Registers are the tools in your hand. Shared memory is your workbench. Global memory is the warehouse across the yard — lots of stock, but a long walk. You batch your warehouse trips and keep what you need on the bench.</div>
@@ -542,7 +544,7 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
 
     <div class="analogy"><b>Analogy:</b> The SM is a <b>parking garage</b> with fixed spaces. If every car (thread) demands two spaces' worth of registers, only half as many park — half occupancy.</div>
 
-    <p class="muted" style="margin-top:14px">Try it: an H100 SM has 65,536 registers and room for 2,048 threads. Drag to see how registers-per-thread caps how many threads fit.</p>
+    <p class="muted" style="margin-top:14px">Try it: an H100 SM has 65,536 registers and room for 2,048 threads — and remember (§3) that a thread's registers are just its local variables, so a bigger, more complex kernel needs more of them. Drag to see how registers-per-thread caps how many threads fit.</p>
 
     <div class="occ-controls">
       <label>Registers per thread: <b id="regVal" style="color:var(--accent)">32</b>
@@ -922,7 +924,7 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
     ['Latency','How long a single operation takes to finish. CPUs minimise this.'],
     ['Throughput','How much total work completes per second. GPUs maximise this.'],
     ['Clock cycle','One tick of the chip’s clock — well under a nanosecond. The basic unit of timing; an add is a few cycles, a global-memory read is hundreds.'],
-    ['FLOPS / TFLOPS','Floating-point operations per second (TFLOPS = trillions). A way to measure compute throughput.'],
+    ['FLOPS / TFLOPS','Floating-point operations per second (TFLOPS = trillions). A throughput rating, dominated by multiply-adds (the heart of matmul). It depends on the number format — the same chip posts far higher FLOPS at lower precision (fp16 / tensor cores) than at fp32 — and it’s a peak, rarely reached in practice because of memory limits.'],
     ['ALU','Arithmetic Logic Unit — the circuit that does the actual math. GPUs pack thousands of them.'],
     ['Core','One execution lane inside an SM; runs one thread’s arithmetic.'],
     ['SM (Streaming Multiprocessor)','The GPU’s main building block: a cluster of cores plus shared memory and schedulers. An H100 has 132.'],
