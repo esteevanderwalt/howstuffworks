@@ -27,6 +27,7 @@ Hero            title · one-line promise · TOC chips · source line
 ▶ Start here    familiar ground → the leap → the one question
 1..N Sections   each: In-plain-words → prose/diagram/interactive → analogy/key callout
 ✓ Recap         the whole picture in one paragraph + a visual arc (.rcap-flow) + hand-off to the next explainer
+Prev / Next     a .pn-nav bar linking the previous & next explainer (a "↑ Series" home link fills the end slot on the first/last)
 Credit footer   source attribution + what's adapted vs added + your byline
 📖 Glossary      every bolded term, searchable, reachable from anywhere
 ```

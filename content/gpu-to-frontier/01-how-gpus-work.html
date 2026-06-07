@@ -208,6 +208,14 @@
   .rcap-flow .a{color:var(--muted);font-size:.8rem}
   .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
   .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+  /* prev / next nav */
+  .pn-nav{display:flex; gap:12px; margin:26px 0 0}
+  .pn{flex:1; border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--panel); text-decoration:none; color:inherit; transition:border-color .15s, transform .15s}
+  .pn:hover{border-color:var(--accent); transform:translateY(-2px)}
+  .pn .dir{display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
+  .pn.next{text-align:right}
+  @media(max-width:560px){.pn-nav{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -649,6 +657,11 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
     <p>A GPU is a <b>factory of SMs</b> (workshops), each packed with cores. You write a <b>kernel</b> — the instructions for one worker — and launch a <b>grid</b> of threads with <code>&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code>. Each thread computes its own <b>global index</b> (<code>blockIdx·blockDim + threadIdx</code>) to find the data it owns. Threads are grouped into <b>blocks</b> assigned to single SMs, then run 32-at-a-time as <b>warps</b>, all executing the same instruction on different data (<b>SIMT</b>). Memory is layered from instant <b>registers</b> up to a huge-but-distant <b>global memory</b>, and the GPU hides that distance by instantly swapping to another ready warp whenever one waits — for free, because every thread keeps its own registers. How full you keep each SM with warps is <b>occupancy</b>, and balancing it against register and memory limits is most of GPU performance work.</p>
     <div class="rcap-flow"><span class="n">independent loop</span><span class="a">→</span><span class="n">1 thread / item</span><span class="a">→</span><span class="n">block</span><span class="a">→</span><span class="n hl">warp = 32</span><span class="a">→</span><span class="n">SM</span><span class="a">→</span><span class="n go">high throughput</span></div>
   </section>
+
+  <nav class="pn-nav">
+    <a class="pn home" href="../../index.html"><span class="dir">↑ Series</span><span class="ttl">All explainers</span></a>
+    <a class="pn next" href="02-tensors.html"><span class="dir">Next →</span><span class="ttl">Tensors</span></a>
+  </nav>
 
   <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
     <h3>References &amp; further reading</h3>

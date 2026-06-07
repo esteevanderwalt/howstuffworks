@@ -215,6 +215,14 @@
   .rcap-flow .a{color:var(--muted);font-size:.8rem}
   .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
   .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+  /* prev / next nav */
+  .pn-nav{display:flex; gap:12px; margin:26px 0 0}
+  .pn{flex:1; border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:var(--panel); text-decoration:none; color:inherit; transition:border-color .15s, transform .15s}
+  .pn:hover{border-color:var(--accent); transform:translateY(-2px)}
+  .pn .dir{display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
+  .pn.next{text-align:right}
+  @media(max-width:560px){.pn-nav{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -317,6 +325,11 @@
     .dircard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:.84rem;color:var(--muted)}
     .dircard b{display:block;margin-bottom:3px;color:var(--ink)}
   </style>
+
+  <nav class="pn-nav">
+    <a class="pn" href="07-transformers-llms.html"><span class="dir">← Previous</span><span class="ttl">Transformers &amp; LLMs</span></a>
+    <a class="pn next home" href="../../index.html"><span class="dir">↑ Series</span><span class="ttl">All explainers</span></a>
+  </nav>
 
   <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
     <h3>References &amp; further reading</h3>
