@@ -185,6 +185,12 @@
   .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
   .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
   .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* recap arc */
+  .rcap-flow{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line); border-radius:8px; padding:5px 9px; background:#0b1019; font-size:.76rem; white-space:nowrap}
+  .rcap-flow .a{color:var(--muted); font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent); color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green); color:var(--green); font-weight:700}
 </style>
 </head>
 <body>
@@ -263,8 +269,12 @@
   <section id="recap" style="border-color:var(--accent)">
     <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
     <p>One dense paragraph that walks the full chain of ideas, using the bolded key terms in order.</p>
-    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px">
-      <span class="pill">key idea 1</span><span class="pill">key idea 2</span><span class="pill">key idea 3</span>
+    <!-- Visual arc: this explainer's key steps as connected nodes. Use .hl for a pivotal node, .go for the payoff. -->
+    <div class="rcap-flow">
+      <span class="n">step 1</span><span class="a">→</span>
+      <span class="n">step 2</span><span class="a">→</span>
+      <span class="n hl">pivotal step</span><span class="a">→</span>
+      <span class="n go">the payoff</span>
     </div>
     <!-- Hand off to the next explainer in the series -->
     <p class="muted" style="margin-top:14px">Next up: <b>NEXT TITLE</b> — the question this piece leaves open.</p>

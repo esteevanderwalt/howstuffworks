@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Machines Learn: gradients &amp; autograd — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #4 extras ---- */
+  .gd-curve{fill:none;stroke:#2a3340;stroke-width:2}
+  .gd-axis{stroke:#2a3340;stroke-width:1}
+  .gdbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .gdbtns .alt{background:var(--panel2);color:var(--ink)}
+  .graphbox{background:#0b1019;border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:8px;font-family:'SF Mono',Menlo,monospace;font-size:.82rem;line-height:1.8;overflow-x:auto}
+  .graphbox .fwd{color:var(--accent)} .graphbox .bwd{color:var(--amber)}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #4</div>
+    <h1>How machines learn: gradients &amp; autograd</h1>
+    <p class="sub">A model is millions of numbers. "Learning" is just nudging each one to be a little less wrong — over and over. Here's the machinery that decides which way to nudge.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#loss">1 · Loss</a>
+      <a href="#gradient">2 · Gradients</a>
+      <a href="#descent">3 · Gradient descent</a>
+      <a href="#chain">4 · The chain rule</a>
+      <a href="#autograd">5 · Tiny autograd</a>
+      <a href="#loop">6 · Training loop</a>
+      <a href="#matmul">7 · Backward is matmul</a>
+      <a href="#deep">8 · Why deep is hard</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from Andrej Karpathy's micrograd, the backpropagation literature, and PyTorch's autograd docs — verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: turning knobs to reduce error</h2>
+    <div class="plain"><b>In plain words:</b> a model is a giant box of number "knobs." Learning = measure how wrong it is, then turn every knob slightly toward "less wrong." Repeat millions of times.</div>
+    <p>Explainer #3 left us with a question: stacking matmuls <em>computes</em> things — but how does a model <em>learn</em> the numbers inside those matrices? Here's the whole idea in one picture.</p>
+    <p>Imagine a single knob and an error meter. Turn the knob a touch; the error moves. If it went down, you turned the right way; if up, the wrong way. Now scale that up: a real model has <b>millions of knobs</b> (its <b>weights</b>), and one error meter (the <b>loss</b>). Learning is turning all the knobs, together, toward lower error.</p>
+    <p style="text-align:center;font-size:1.06rem;color:var(--accent);font-weight:700;margin:16px 0">With millions of knobs, how do you know which way to turn each one — without trying them one at a time?</p>
+    <div class="key"><b>The answer:</b> the <b>gradient</b> tells you, for every knob at once, which way and how hard to turn it. Computing it efficiently for millions of knobs is <b>backpropagation</b>, and the system that does it automatically is <b>autograd</b>. That's this whole explainer.</div>
+  </section>
+
+  <section id="loss">
+    <h2><span class="num">1</span> Loss: one number for "how wrong"</h2>
+    <div class="plain"><b>In plain words:</b> the loss is a single number that measures how far the model's predictions are from the right answers. Smaller is better; learning means making it small.</div>
+    <p>Before you can improve, you need a score. The <b>loss function</b> boils the model's wrongness down to <em>one number</em>. A common one is squared error — for each example, take (prediction − target), square it, average over the batch:</p>
+    <div class="codecard" style="max-width:440px">
+      <div class="head">Loss <span class="where">mean squared error</span></div>
+<pre class="code">loss = mean((prediction - target)**<span class="nm">2</span>)</pre>
+    </div>
+    <p>Everything the model does — every matmul from #1–3 — feeds into this one number. <b>Learning is the search for weights that make the loss small.</b> So the real question is: which way do we move the weights?</p>
+  </section>
+
+  <section id="gradient">
+    <h2><span class="num">2</span> The gradient: which way is downhill</h2>
+    <div class="plain"><b>In plain words:</b> the gradient is the slope of the loss with respect to each weight — nudge the weight a hair, and the gradient says how much the loss moves, and in which direction.</div>
+    <p><span class="muted">(Calculus refresher, no jargon:)</span> a <b>derivative</b> answers one question — "if I nudge this input a tiny bit, how much does the output change, and which way?" That's it. A big positive derivative means "push this up and the loss shoots up" (so push it <em>down</em>); near zero means "this knob barely matters right now."</p>
+    <p>The <b>gradient</b> is just <em>all</em> those derivatives at once — one slope per weight, bundled into a vector. It points in the direction the loss increases fastest. So to <em>reduce</em> the loss, you step the opposite way. That single rule — <b>step against the gradient</b> — is called <b>gradient descent</b>.</p>
+    <div class="analogy"><b>Analogy:</b> you're on a foggy hillside (the loss surface) and want the valley. You can't see far, but you can feel the slope under your feet. The gradient is that slope; you take a step downhill, then feel again, and repeat.</div>
+  </section>
+
+  <section id="descent">
+    <h2><span class="num">3</span> Gradient descent &amp; the learning rate</h2>
+    <div class="plain"><b>In plain words:</b> take a downhill step, re-measure, step again. The <em>learning rate</em> is how big each step is — too small crawls, too big overshoots and blows up.</div>
+    <p>Each step is dead simple: <code>weight = weight − learning_rate × gradient</code>. The <b>learning rate</b> is the one knob you tune by hand. Drag it and watch the ball roll down the loss curve — small steps creep, a good rate converges fast, and too-big steps bounce out of the valley entirely:</p>
+    <div class="stage">
+      <label style="font-size:.85rem">Learning rate: <b id="lrVal" style="color:var(--accent)">0.10</b></label>
+      <input type="range" id="lr" min="0.05" max="2.30" step="0.05" value="0.10" style="width:100%;max-width:420px;display:block;margin-top:4px">
+      <div class="gdbtns">
+        <button class="btn" id="gdStep">Step ↓</button>
+        <button class="btn" id="gdRun">▶ Run 20 steps</button>
+        <button class="btn alt" id="gdReset">Reset</button>
+      </div>
+      <svg id="gdSvg" viewBox="0 0 440 250" style="width:100%;max-width:480px;margin-top:12px;display:block"></svg>
+      <div class="cost" id="gdOut"></div>
+    </div>
+    <p class="muted">That's the entire learning algorithm: step downhill, repeat. Everything else is about computing the gradient — which, for a deep model, is the clever part.</p>
+  </section>
+
+  <section id="chain">
+    <h2><span class="num">4</span> The chain rule: gradients through a graph</h2>
+    <div class="plain"><b>In plain words:</b> a model is a chain of simple operations. To find how an early weight affects the final loss, you multiply the little local effects along the chain. That's the chain rule.</div>
+    <p>A model isn't one operation — it's a <b>computational graph</b> of simple steps (multiply, add, activate) feeding into each other, ending at the loss. Each step knows its own <b>local derivative</b> ("if my input wiggles, my output wiggles this much"). The chain rule says: to get the effect of a weight deep in the graph on the final loss, <b>multiply the local derivatives along the path</b> between them.</p>
+    <p>So gradients are computed in two sweeps:</p>
+    <ul class="ann">
+      <li><b class="fwd" style="color:var(--accent)">Forward pass</b> — run the graph left-to-right, computing every value, ending at the loss.</li>
+      <li><b style="color:var(--amber)">Backward pass</b> — start at the loss with gradient 1, and walk <em>right-to-left</em>, multiplying local derivatives to hand each node its gradient. This is <b>backpropagation</b>.</li>
+    </ul>
+    <p class="muted" style="margin-bottom:4px">Take a tiny graph — <code>d = a·b</code>, then <code>L = d + c</code>:</p>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;font-family:'SF Mono',Menlo,monospace;font-size:.82rem;margin:6px 0 4px">
+      <span style="border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:var(--panel2)">a</span>
+      <span style="border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:var(--panel2)">b</span>
+      <span style="color:var(--muted)">→ × →</span>
+      <span style="border:1px solid var(--accent);border-radius:6px;padding:3px 9px;background:rgba(88,166,255,.15);color:var(--accent)">d</span>
+      <span style="border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:var(--panel2)">c</span>
+      <span style="color:var(--muted)">→ + →</span>
+      <span style="border:1px solid var(--green);border-radius:6px;padding:3px 9px;background:rgba(63,185,80,.15);color:var(--green);font-weight:700">L (loss)</span>
+    </div>
+    <div class="codewrap">
+      <div class="codecard">
+        <div class="head"><span class="fwd" style="color:var(--accent)">① Forward</span> <span class="where">left → right, build the loss</span></div>
+<pre class="code">a, b, c        <span class="cm"># inputs / weights</span>
+d = a * b      <span class="cm"># multiply</span>
+L = d + c      <span class="cm"># add → the loss</span></pre>
+      </div>
+      <div class="codecard">
+        <div class="head"><span style="color:var(--amber)">② Backward</span> <span class="where">loss → left, chain rule</span></div>
+<pre class="code">dL/dL = 1                <span class="cm"># seed</span>
+dL/dd = 1                <span class="cm"># L = d + c</span>
+dL/dc = 1
+dL/da = dL/dd <span class="nm">·</span> b        <span class="cm"># d = a · b</span>
+dL/db = dL/dd <span class="nm">·</span> a</pre>
+      </div>
+    </div>
+    <p>The key efficiency: backprop computes the gradient for <em>every</em> weight in a single backward sweep — not by re-running the model once per weight. That's what makes training millions of parameters feasible.</p>
+  </section>
+
+  <section id="autograd">
+    <h2><span class="num">5</span> Build a tiny autograd</h2>
+    <div class="plain"><b>In plain words:</b> you don't do the chain rule by hand. Each value remembers how it was made and a tiny rule for pushing gradient back — string them together and backprop runs itself.</div>
+    <p>This is the trick at the heart of every deep-learning framework, and it's small. Make each number a little object — a <b>Value</b> — that records <b>its parents</b> (what it was computed from) and a <b>local backward rule</b>. Then one traversal does the whole chain rule:</p>
+    <div class="codecard" style="max-width:560px">
+      <div class="head">micrograd-style autograd <span class="where">the whole idea</span></div>
+<pre class="code"><span class="kw">class</span> <span class="ty">Value</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, data, parents=()):
+        self.data = data
+        self.grad = <span class="nm">0</span>            <span class="cm"># dLoss/dself, filled in by backward</span>
+        self._parents = parents
+        self._backward = <span class="kw">lambda</span>: <span class="kw">None</span>   <span class="cm"># local rule</span>
+
+    <span class="kw">def</span> <span class="fn">__mul__</span>(self, other):
+        out = <span class="ty">Value</span>(self.data * other.data, (self, other))
+        <span class="kw">def</span> <span class="fn">_backward</span>():        <span class="cm"># chain rule for a*b</span>
+            self.grad  += other.data * out.grad
+            other.grad += self.data  * out.grad
+        out._backward = _backward
+        <span class="kw">return</span> out</pre>
+    </div>
+    <p>Call <code>loss.backward()</code> and it seeds <code>grad = 1</code> at the loss, then walks the parents in reverse, running each node's <code>_backward</code> — exactly the right-to-left sweep from §4. Every weight ends up with its gradient, automatically.</p>
+    <div class="key"><b>The punchline (Karpathy):</b> "These ~94 lines are everything needed to train a neural network. Everything else is just efficiency." <b>PyTorch (explainer #5) is this same idea</b>, scaled up and running its operations as GPU matmuls.</div>
+  </section>
+
+  <section id="loop">
+    <h2><span class="num">6</span> The training loop</h2>
+    <div class="plain"><b>In plain words:</b> learning is four steps in a loop — predict, score, find the gradients, nudge the weights. Run it thousands of times and the model gets good.</div>
+    <p>Put it all together and the entire act of "training" is this little loop:</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">The training loop <span class="where">PyTorch-flavoured</span></div>
+<pre class="code"><span class="kw">for</span> batch <span class="kw">in</span> data:
+    pred = model(batch.x)              <span class="cm"># 1. forward</span>
+    loss = loss_fn(pred, batch.y)      <span class="cm"># 2. score</span>
+    loss.backward()                    <span class="cm"># 3. gradients (backprop)</span>
+    optimizer.step()                   <span class="cm"># 4. nudge weights downhill</span>
+    optimizer.zero_grad()              <span class="cm">#    reset for next round</span></pre>
+    </div>
+    <p>Forward → loss → backward → step. That's it. The <b>optimizer</b> is just gradient descent (§3) wrapped up — <code>step()</code> applies <code>weight −= lr × grad</code> for every weight at once. Repeat over the data many times (<b>epochs</b>) and the loss falls.</p>
+  </section>
+
+  <section id="matmul">
+    <h2><span class="num">7</span> Backward is also matmul</h2>
+    <div class="plain"><b>In plain words:</b> the backward pass isn't a different kind of work — it's more matrix multiplies. So training runs on the exact GPU machinery from explainers #1–3.</div>
+    <p>A layer's forward pass is a matmul: <code>y = W · x</code>. Its backward pass — computing the gradient w.r.t. the input and the weights — is <em>also</em> matmuls (with transposed versions of W and x). So a training step is just <b>two passes of matmul</b>: one forward, one (roughly twice as much work) backward.</p>
+    <div class="key"><b>Why this matters:</b> everything you learned about making matmul fast — tiling, tensor cores, fp16/bf16 (#3) — applies directly to <em>training</em>, not just inference. Learning is GPU-bound for the same reason inference is: it's matmul all the way down.</div>
+  </section>
+
+  <section id="deep">
+    <h2><span class="num">8</span> Why deep networks are hard to train</h2>
+    <div class="plain"><b>In plain words:</b> backprop multiplies many local derivatives together. If they're mostly under 1, the gradient shrinks to nothing by the early layers; if over 1, it explodes.</div>
+    <p>The chain rule's multiplication is also its weakness. In a deep stack, the gradient reaching an early layer is a <em>product</em> of many local derivatives. Two failure modes:</p>
+    <ul class="ann">
+      <li><b>Vanishing gradients</b> — classic activations like sigmoid have derivatives ≤ 0.25. Multiply dozens of sub-1 numbers and the product collapses toward zero, so early layers barely learn.</li>
+      <li><b>Exploding gradients</b> — if local derivatives are above 1, the product blows up, and updates become wild and unstable.</li>
+    </ul>
+    <p>The fixes are the scaffolding of modern deep learning: <b>ReLU</b> activations (derivative of 1, no shrinkage), <b>residual connections</b> (gradient shortcuts), <b>normalization</b> (batch/layer norm), and <b>gradient clipping</b> (cap the size). They're why we <em>can</em> train very deep models at all — and several reappear inside the transformer (#7).</p>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>A model is millions of <b>weights</b>; the <b>loss</b> scores how wrong it is in one number. The <b>gradient</b> — the slope of the loss w.r.t. every weight — says which way to nudge each one, and <b>gradient descent</b> steps against it, with the <b>learning rate</b> setting step size. To get those gradients through a deep <b>computational graph</b>, the <b>chain rule</b> multiplies local derivatives backward from the loss (<b>backpropagation</b>), and <b>autograd</b> automates it: each <b>Value</b> remembers its parents and a local rule. Wrap it in the <b>training loop</b> — forward, loss, backward, step — and the model learns. Under the hood the backward pass is <b>more matmul</b>, so it rides the same GPU machinery from #1–3; stack too deep without care and gradients <b>vanish or explode</b>.</p>
+    <div class="rcap-flow"><span class="n">loss</span><span class="a">→</span><span class="n">gradient</span><span class="a">→</span><span class="n">chain rule</span><span class="a">→</span><span class="n hl">backprop / autograd</span><span class="a">→</span><span class="n go">loop: fwd→loss→back→step</span></div>
+    <p class="muted" style="margin-top:14px">Next up: <b>#5 · PyTorch</b> — the framework that is this autograd + training loop, scaled to real models and wired to the GPU.</p>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Concepts here were checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://github.com/karpathy/micrograd" target="_blank" rel="noopener">Andrej Karpathy — micrograd</a> — <span>the ~100-line autograd engine this explainer's §5 is built on.</span></li>
+      <li><a href="https://docs.pytorch.org/docs/stable/notes/autograd.html" target="_blank" rel="noopener">PyTorch — Autograd mechanics</a> — <span>how a real framework records the graph and runs the backward pass.</span></li>
+      <li><a href="https://www.deeplearningbook.org/" target="_blank" rel="noopener">Goodfellow, Bengio &amp; Courville — <i>Deep Learning</i></a> — <span>backpropagation, gradient descent, and the vanishing/exploding-gradient problem.</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers worth your time:</b></p>
+    <ul class="refs">
+      <li><a href="https://www.youtube.com/watch?v=VMj-3S1tku0" target="_blank" rel="noopener">Karpathy, "The spelled-out intro to neural networks and backpropagation: building micrograd"</a> <span>— the video that builds the above from scratch.</span></li>
+      <li><a href="https://www.3blue1brown.com/topics/neural-networks" target="_blank" rel="noopener">3Blue1Brown — Neural Networks series</a> <span>— the most intuitive visual take on gradient descent and backprop.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> · part of the <b style="color:var(--ink)">Explainers</b> series.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- Gradient descent on a loss curve ---- */
+  var SVGNS='http://www.w3.org/2000/svg';
+  var svg=document.getElementById('gdSvg');
+  var W=440,H=250, x0=20,x1=420, yTop=20,yBot=220;
+  function wToX(w){ return x0 + (w+10)/20*(x1-x0); }   // w in [-10,10]
+  function lossOf(w){ return 0.5*w*w; }                 // min at w=0
+  function lToY(L){ return yBot - Math.min(L,50)/50*(yBot-yTop); }
+  var lr=document.getElementById('lr'), lrVal=document.getElementById('lrVal'),
+      gdOut=document.getElementById('gdOut');
+  var w=8, runTimer=null;
+  function initSvg(){
+    if(!svg) return;
+    svg.innerHTML='';
+    // axis
+    var ax=document.createElementNS(SVGNS,'line'); ax.setAttribute('class','gd-axis');
+    ax.setAttribute('x1',x0);ax.setAttribute('y1',yBot);ax.setAttribute('x2',x1);ax.setAttribute('y2',yBot); svg.appendChild(ax);
+    // parabola
+    var d='M';
+    for(var px=-10; px<=10; px+=0.5){ d+=' '+wToX(px).toFixed(1)+','+lToY(lossOf(px)).toFixed(1); }
+    var path=document.createElementNS(SVGNS,'path'); path.setAttribute('class','gd-curve'); path.setAttribute('d',d.replace('M ','M ')); svg.appendChild(path);
+    // group for trail + ball
+    var g=document.createElementNS(SVGNS,'g'); g.setAttribute('id','gdDyn'); svg.appendChild(g);
+  }
+  function drawBall(trail){
+    var g=document.getElementById('gdDyn'); if(!g) return;
+    if(trail){
+      var t=document.createElementNS(SVGNS,'circle');
+      t.setAttribute('cx',wToX(w));t.setAttribute('cy',lToY(lossOf(w)));t.setAttribute('r',3);
+      t.setAttribute('fill','rgba(210,153,34,.5)'); g.appendChild(t);
+    }
+    var old=document.getElementById('gdBall'); if(old) old.remove();
+    var b=document.createElementNS(SVGNS,'circle'); b.setAttribute('id','gdBall');
+    b.setAttribute('cx',wToX(w));b.setAttribute('cy',lToY(lossOf(w)));b.setAttribute('r',7);
+    b.setAttribute('fill','var(--accent)'); g.appendChild(b);
+  }
+  function status(){
+    var rate=+lr.value;
+    var verdict, col;
+    if(rate>2){verdict='diverging — steps overshoot and grow';col='var(--amber)';}
+    else if(rate>1){verdict='oscillating but converging';col='var(--green)';}
+    else if(rate<0.2){verdict='converging slowly';col='var(--muted)';}
+    else {verdict='converging nicely';col='var(--green)';}
+    gdOut.className='cost';
+    gdOut.innerHTML='w = <b>'+w.toFixed(2)+'</b>, loss = <b>'+lossOf(w).toFixed(2)+'</b> &nbsp; <span style="color:'+col+'">('+verdict+', lr='+rate.toFixed(2)+')</span>';
+  }
+  function step(){
+    var rate=+lr.value;
+    var grad=w;             // d/dw of 0.5 w^2
+    w = w - rate*grad;      // gradient-descent update
+    if(w>12) w=12; if(w<-12) w=-12;   // clamp for display
+    drawBall(true); status();
+  }
+  function reset(){ if(runTimer){clearInterval(runTimer);runTimer=null;} w=8; initSvg(); drawBall(false); status(); }
+  if(svg){
+    lr.addEventListener('input',function(){lrVal.textContent=(+lr.value).toFixed(2);status();});
+    document.getElementById('gdStep').addEventListener('click',step);
+    document.getElementById('gdReset').addEventListener('click',reset);
+    document.getElementById('gdRun').addEventListener('click',function(){
+      if(runTimer){clearInterval(runTimer);runTimer=null;return;}
+      var n=0; runTimer=setInterval(function(){ step(); if(++n>=20){clearInterval(runTimer);runTimer=null;} },150);
+    });
+    reset();
+  }
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Weight / parameter','One of the millions of tunable numbers inside a model. Training adjusts them to reduce the loss.'],
+    ['Loss','A single number measuring how wrong the model is on the current data. Learning = making it small.'],
+    ['Gradient','The slope of the loss with respect to a weight: nudge the weight, and the gradient says how much (and which way) the loss moves. One per weight.'],
+    ['Derivative','How much an output changes when you nudge an input a tiny bit — the building block of a gradient.'],
+    ['Gradient descent','The learning rule: step each weight against its gradient to reduce the loss. weight −= learning_rate × gradient.'],
+    ['Learning rate','The size of each gradient-descent step. Too big overshoots/diverges; too small crawls.'],
+    ['Chain rule','To get an early weight\'s effect on the final loss, multiply the local derivatives along the path between them.'],
+    ['Computational graph','The model written as a graph of simple operations feeding into each other, ending at the loss.'],
+    ['Forward pass','Running the graph left-to-right to compute every value and the final loss.'],
+    ['Backward pass / backpropagation','Walking the graph right-to-left from the loss, applying the chain rule to give every weight its gradient — in one sweep.'],
+    ['Autograd','The system that records the graph and runs backpropagation automatically. Each value remembers its parents and a local backward rule.'],
+    ['Optimizer','The object that applies gradient descent — its step() updates every weight from its gradient. (SGD, Adam, …)'],
+    ['Epoch','One full pass over the training data. Training repeats for many epochs.'],
+    ['Vanishing / exploding gradients','In deep nets the gradient is a product of many local derivatives; if they\'re mostly <1 it shrinks to zero, if >1 it blows up. Fixed with ReLU, residuals, normalization, clipping.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>

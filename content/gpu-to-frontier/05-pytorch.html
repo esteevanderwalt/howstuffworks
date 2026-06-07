@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyTorch: where it all comes together — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #5 extras ---- */
+  .looplines{background:#0b1019;border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:8px;font-family:'SF Mono',Menlo,monospace;font-size:.8rem;overflow-x:auto}
+  .loop-line{padding:5px 10px;border-radius:6px;cursor:pointer;white-space:pre;color:var(--ink)}
+  .loop-line:hover{background:var(--panel2)}
+  .loop-line.on{background:rgba(88,166,255,.15);box-shadow:inset 3px 0 0 var(--accent)}
+  .loop-line .cm{color:#7d8da1}
+  .loop-detail{background:#0b1019;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;font-size:.9rem;min-height:3.2em}
+  .loop-detail .ref{color:var(--accent);font-size:.8rem;font-weight:700;display:block;margin-top:4px}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #5</div>
+    <h1>PyTorch: where it all comes together</h1>
+    <p class="sub">You've now built the pieces by hand — tensors, autograd, a training loop. PyTorch is exactly those ideas, productionized and wired to the GPU. This is where the series clicks into place.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#tensor">1 · Tensor + autograd</a>
+      <a href="#tape">2 · The autograd tape</a>
+      <a href="#module">3 · nn.Module</a>
+      <a href="#optimizer">4 · The optimizer</a>
+      <a href="#loop">5 · The training loop</a>
+      <a href="#gpu">6 · Onto the GPU</a>
+      <a href="#compile">7 · eager vs compile</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from the PyTorch documentation and Edward Z. Yang's "PyTorch internals" — verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: you already built this</h2>
+    <div class="plain"><b>In plain words:</b> PyTorch isn't new magic. It's the tensor from #2, the autograd and training loop from #4, and the GPU matmuls from #1–3 — bundled into one library you can actually use.</div>
+    <p>In #4 you hand-built a tiny autograd and a five-step training loop. Here's the punchline of the whole series so far: <b>that's all PyTorch is</b>, scaled up and made fast. Four pieces, each one an explainer you've already read:</p>
+    <ul class="ann">
+      <li><b>Tensors</b> that also track gradients — explainer #2 + #4.</li>
+      <li><b>nn.Module</b> — a tidy way to stack layers (each a matmul, #3) into a model.</li>
+      <li><b>An optimizer</b> — gradient descent from #4, wrapped up.</li>
+      <li><b>.to('cuda')</b> — and the whole thing runs on the GPU from #1.</li>
+    </ul>
+    <div class="key"><b>The one idea:</b> PyTorch is the glue. Tensors carry the data, autograd computes the gradients, the optimizer applies them, and the dispatcher sends every operation to a fast GPU kernel. Learn how the pieces snap together and you can read almost any training script.</div>
+  </section>
+
+  <section id="tensor">
+    <h2><span class="num">1</span> The tensor, now with gradients</h2>
+    <div class="plain"><b>In plain words:</b> a PyTorch tensor is the flat-buffer-plus-metadata array from #2 — with one addition: it can remember every operation done to it, so gradients can flow back.</div>
+    <p>It's the same tensor from explainer #2 (storage + shape + strides + dtype). The new trick: set <code>requires_grad=True</code> and the tensor starts <b>recording</b> what happens to it.</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">PyTorch <span class="where">a tensor that tracks gradients</span></div>
+<pre class="code"><span class="kw">import</span> torch
+w = torch.randn(<span class="nm">3</span>, requires_grad=<span class="kw">True</span>)   <span class="cm"># a weight to learn</span>
+y = (w * <span class="nm">2</span>).sum()                      <span class="cm"># do some math</span>
+y.backward()                            <span class="cm"># fill w.grad via autograd</span>
+w.grad                                  <span class="cm"># tensor([2., 2., 2.])</span></pre>
+    </div>
+    <p>Every model <b>parameter</b> is just a tensor with <code>requires_grad=True</code>. That single flag is what turns a plain array into something trainable.</p>
+  </section>
+
+  <section id="tape">
+    <h2><span class="num">2</span> The autograd tape</h2>
+    <div class="plain"><b>In plain words:</b> as you run the forward pass, PyTorch quietly records each operation on a "tape." Calling .backward() replays that tape in reverse to compute gradients — exactly the tiny autograd from #4, at scale.</div>
+    <p>This is #4's <code>Value</code>-remembers-its-parents idea, built into the framework. When you operate on tensors that need gradients, PyTorch:</p>
+    <ul class="ann">
+      <li>Runs the op <em>and</em> records a backward node on the result (its <code>grad_fn</code>, e.g. <code>MmBackward</code> for a matmul).</li>
+      <li>Builds these nodes into a graph <b>as the code runs</b> — "define-by-run." The graph can change every iteration (loops, ifs all work), and it's rebuilt fresh each step.</li>
+      <li>On <code>loss.backward()</code>, walks that graph backward from the loss, filling each parameter's <code>.grad</code>.</li>
+    </ul>
+    <div class="key"><b>One gotcha worth knowing:</b> PyTorch <em>accumulates</em> into <code>.grad</code> rather than overwriting — handy for some tricks, but it's why every training loop calls <code>zero_grad()</code> first. Forget it and this step's gradients pile on top of last step's.</div>
+  </section>
+
+  <section id="module">
+    <h2><span class="num">3</span> nn.Module: stacking the layers</h2>
+    <div class="plain"><b>In plain words:</b> an nn.Module is a tidy container for layers and their weights. You define what the forward pass does; PyTorch tracks all the parameters for you.</div>
+    <p>A model is a stack of layers, and each layer is mostly a matmul (#3: <code>y = W·x</code>) plus an activation. <code>nn.Module</code> is the standard way to bundle them: declare the layers, write the <code>forward</code>, and every weight inside is automatically a tracked parameter.</p>
+    <div class="codecard" style="max-width:540px">
+      <div class="head">PyTorch <span class="where">a tiny two-layer network</span></div>
+<pre class="code"><span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="ty">Net</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        super().__init__()
+        self.fc1 = nn.Linear(<span class="nm">784</span>, <span class="nm">128</span>)   <span class="cm"># a matmul + bias</span>
+        self.fc2 = nn.Linear(<span class="nm">128</span>, <span class="nm">10</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        x = torch.relu(self.fc1(x))    <span class="cm"># matmul → activation</span>
+        <span class="kw">return</span> self.fc2(x)             <span class="cm"># → logits</span></pre>
+    </div>
+    <p>Calling <code>model(x)</code> runs <code>forward</code> (and records the autograd tape along the way). <code>model.parameters()</code> hands you every weight — which is exactly what the optimizer needs next.</p>
+  </section>
+
+  <section id="optimizer">
+    <h2><span class="num">4</span> The optimizer: gradient descent, wrapped</h2>
+    <div class="plain"><b>In plain words:</b> the optimizer holds all the model's weights and, on command, nudges each one downhill using the gradients autograd computed. It's #4's gradient descent in a box.</div>
+    <p>You hand the optimizer every parameter once, up front. Then each step it applies the update from explainer #4 — <code>weight −= learning_rate × grad</code> — to all of them at once:</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">PyTorch <span class="where">create an optimizer</span></div>
+<pre class="code">opt = torch.optim.Adam(model.parameters(), lr=<span class="nm">1e-3</span>)
+<span class="cm"># opt.step()  applies weight -= lr * grad to every parameter</span>
+<span class="cm"># opt.zero_grad()  clears grads before the next backward</span></pre>
+    </div>
+    <p><b>Adam</b> and friends are just smarter versions of gradient descent — they adapt the step size per weight — but the idea is identical: use the gradient to move toward lower loss.</p>
+  </section>
+
+  <section id="loop">
+    <h2><span class="num">5</span> The training loop, for real</h2>
+    <div class="plain"><b>In plain words:</b> here's a complete, runnable training script. It's the five steps from #4 — forward, loss, backward, step — written in real PyTorch. Click any line to see what it does and where in the series it came from.</div>
+    <p>Everything so far assembles into this. <span class="muted">(Click each line.)</span></p>
+    <div class="stage">
+      <div class="looplines" id="loopLines"></div>
+      <div class="loop-detail" id="loopDetail">Click a line above to see what it does — and which earlier explainer it comes from.</div>
+    </div>
+    <div class="key"><b>That's the whole thing.</b> A real model differs only in scale — bigger layers, more data, fancier optimizers — but every deep-learning training script you'll ever read is this loop. You now understand all of it.</div>
+  </section>
+
+  <section id="gpu">
+    <h2><span class="num">6</span> Onto the GPU</h2>
+    <div class="plain"><b>In plain words:</b> one method — .to('cuda') — moves a tensor or model onto the GPU. After that, every operation automatically runs as a GPU kernel from explainers #1–3.</div>
+    <p>A tensor lives on a <b>device</b> — CPU or GPU. Move the model and the data to the GPU and you're done:</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">PyTorch <span class="where">move to the GPU</span></div>
+<pre class="code">device = <span class="st">"cuda"</span> <span class="kw">if</span> torch.cuda.is_available() <span class="kw">else</span> <span class="st">"cpu"</span>
+model = model.to(device)
+x = x.to(device)
+out = model(x)        <span class="cm"># now every op runs on the GPU</span></pre>
+    </div>
+    <p>Here's the link back to the whole first half of the series: when you write <code>a @ b</code>, PyTorch's <b>dispatcher</b> looks at where the tensors live and routes the call to the right kernel — on a CUDA tensor, that's <b>cuBLAS</b> (explainer #3's tuned matmul), running on the SMs and tensor cores from #1. You write one line of Python; under it is everything from explainers #1–3.</p>
+  </section>
+
+  <section id="compile">
+    <h2><span class="num">7</span> Eager vs. torch.compile</h2>
+    <div class="plain"><b>In plain words:</b> by default PyTorch runs line by line (easy to debug). Wrap your model in torch.compile and it captures the whole graph and fuses it into faster kernels.</div>
+    <p>PyTorch's default is <b>eager mode</b> — "define-by-run," where each line executes immediately. That's why it's so pleasant to debug: you can print a tensor mid-model, set a breakpoint, use normal Python control flow. The cost is that the GPU does one op at a time, with Python overhead between them.</p>
+    <p><b>torch.compile</b> (one line: <code>model = torch.compile(model)</code>) captures your model into a graph the first time it runs, then <b>fuses operations into optimized kernels</b> and reuses them — often a sizable speedup, with little code change. The trade-off is the classic one from the series: eager is flexible and easy; compiled is faster but more rigid.</p>
+    <div class="key"><b>The mental model:</b> eager = an interpreter (run now, easy to inspect); compile = a JIT compiler (capture, optimize, then run fast). Start in eager, reach for compile when you need the speed.</div>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>PyTorch is the four pieces of this series, assembled. A <b>tensor</b> (#2) with <code>requires_grad</code> records an <b>autograd tape</b> as you run; an <b>nn.Module</b> stacks layers (each a matmul, #3) into a model whose weights are tracked parameters; an <b>optimizer</b> applies gradient descent (#4) to those weights. The <b>training loop</b> — zero_grad, forward, loss, <code>backward()</code>, <code>step()</code> — is #4's five steps in real code. Call <code>.to('cuda')</code> and the <b>dispatcher</b> sends every op (like <code>a @ b</code>) to a GPU kernel such as <b>cuBLAS</b> (#1–3). It runs <b>eager</b> by default for easy debugging, and <b>torch.compile</b> fuses the graph when you need speed.</p>
+    <div class="rcap-flow"><span class="n">tensor + autograd</span><span class="a">→</span><span class="n">nn.Module</span><span class="a">→</span><span class="n">optimizer</span><span class="a">→</span><span class="n hl">training loop</span><span class="a">→</span><span class="n go">.to(cuda) → cuBLAS</span></div>
+    <p class="muted" style="margin-top:14px">Next up: <b>#6 · Attention</b> — the one idea, built from these exact pieces, that powers every modern language model.</p>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Behaviour here was checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://docs.pytorch.org/tutorials/beginner/blitz/autograd_tutorial.html" target="_blank" rel="noopener">PyTorch — A Gentle Introduction to torch.autograd</a> — <span>requires_grad, the dynamic graph, and .backward().</span></li>
+      <li><a href="https://docs.pytorch.org/docs/stable/notes/autograd.html" target="_blank" rel="noopener">PyTorch — Autograd mechanics</a> — <span>grad_fn, gradient accumulation, and why zero_grad.</span></li>
+      <li><a href="https://docs.pytorch.org/docs/stable/notes/cuda.html" target="_blank" rel="noopener">PyTorch — CUDA semantics</a> — <span>devices, .to('cuda'), and how ops run on the GPU.</span></li>
+      <li><a href="https://docs.pytorch.org/docs/stable/torch.compiler.html" target="_blank" rel="noopener">PyTorch — torch.compile</a> — <span>graph capture and kernel fusion vs eager mode.</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers worth your time:</b></p>
+    <ul class="refs">
+      <li><a href="https://blog.ezyang.com/2019/05/pytorch-internals/" target="_blank" rel="noopener">Edward Z. Yang, "PyTorch internals"</a> <span>— the dispatcher, autograd, and how a call becomes a kernel.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> · part of the <b style="color:var(--ink)">Explainers</b> series.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- Clickable training loop ---- */
+  var loop=[
+    {t:'model = Net().to(device)', detail:'Build the model and move its parameters onto the GPU in one call.', ref:'→ nn.Module (§3) · the device (#1, §6 here)'},
+    {t:'opt = torch.optim.Adam(model.parameters(), lr=1e-3)', detail:'Hand every weight to the optimizer once; it will nudge them downhill each step.', ref:'→ the optimizer (§4) · gradient descent (#4)'},
+    {t:'for x, y in loader:', detail:'Loop over batches of data — inputs x and correct answers y.', ref:'→ epochs &amp; batches (#4, §6)'},
+    {t:'    x, y = x.to(device), y.to(device)', detail:'Move this batch onto the GPU so the math runs there.', ref:'→ tensors (#2) · onto the GPU (§6)'},
+    {t:'    opt.zero_grad()', detail:'Clear last step\'s gradients — PyTorch accumulates into .grad, so reset first.', ref:'→ the autograd tape (§2)'},
+    {t:'    pred = model(x)', detail:'Forward pass: a stack of matmuls + activations, recording the autograd tape.', ref:'→ matmul (#3) · forward pass (#4, §4)'},
+    {t:'    loss = loss_fn(pred, y)', detail:'Boil "how wrong" down to one number.', ref:'→ loss (#4, §1)'},
+    {t:'    loss.backward()', detail:'Autograd walks the tape backward, filling every weight\'s .grad via the chain rule.', ref:'→ backprop / autograd (#4, §4–5)'},
+    {t:'    opt.step()', detail:'Gradient descent: weight -= lr × grad, for every parameter at once.', ref:'→ gradient descent (#4, §3, §6)'}
+  ];
+  var box=document.getElementById('loopLines'), det=document.getElementById('loopDetail');
+  if(box){
+    loop.forEach(function(l,i){
+      var d=document.createElement('div'); d.className='loop-line'; d.textContent=l.t; d.dataset.i=i;
+      d.addEventListener('click',function(){
+        box.querySelectorAll('.loop-line').forEach(function(e){e.classList.remove('on');});
+        d.classList.add('on');
+        det.innerHTML=l.detail+'<span class="ref">'+l.ref+'</span>';
+      });
+      box.appendChild(d);
+    });
+  }
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Tensor (PyTorch)','The array from #2 (storage + shape + strides + dtype) that can also track gradients when requires_grad=True.'],
+    ['requires_grad','A flag on a tensor that tells autograd to record operations on it, so gradients can flow back. Every model parameter has it set.'],
+    ['Autograd tape','The graph PyTorch records as the forward pass runs (define-by-run). .backward() replays it in reverse to compute gradients.'],
+    ['grad_fn','The backward node attached to a tensor produced by an op (e.g. MmBackward for a matmul) — a link in the autograd graph.'],
+    ['.grad / zero_grad()','.grad holds a parameter\'s gradient. PyTorch accumulates into it, so the loop calls zero_grad() each step to reset.'],
+    ['nn.Module','The base class for models: declare layers in __init__, define forward(); all weights inside become tracked parameters.'],
+    ['Parameter','A tensor (requires_grad=True) that the model learns. model.parameters() yields them all.'],
+    ['Optimizer','Holds the parameters and applies gradient descent. step() does weight -= lr × grad; Adam adapts the step size per weight.'],
+    ['Training loop','zero_grad → forward → loss → backward → step, repeated over the data. #4\'s five steps in real PyTorch.'],
+    ['Device','Where a tensor lives — CPU or GPU. .to(\'cuda\') moves it; ops then run on that device.'],
+    ['Dispatcher','PyTorch\'s router: picks the kernel for an op based on the tensors\' device/dtype — e.g. matmul on CUDA → cuBLAS.'],
+    ['Eager mode','The default: each line runs immediately (define-by-run). Easy to debug with normal Python.'],
+    ['torch.compile','Captures the model into a graph and fuses ops into optimized kernels for speed — the JIT-compiled alternative to eager.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>

@@ -16,14 +16,14 @@ Each explainer ends by raising the exact question the next one answers, so the w
 
 | # | Explainer | What you'll understand | Status | Built on |
 |---|-----------|------------------------|--------|----------|
-| 1 | **How GPUs Work** | Parallel hardware & the execution model — why thousands of slow cores beat a few fast ones | ✅ Live | NVIDIA docs · Hwu et al. · Upadhyay |
-| 2 | **Tensors** | The data structure of AI — shape, strides, dtypes, and how every op maps to a GPU kernel | 🔜 Planned | ezyang, *PyTorch internals* |
-| 3 | **Matmul** | The one operation that runs the world — GEMM, tiling, tensor cores, memory- vs compute-bound | 🔜 Planned | Simon Boehm |
-| 4 | **How Machines Learn** | Gradients, autograd & the training loop — the chain rule, made mechanical | 🔜 Planned | Karpathy, *micrograd* |
-| 5 | **PyTorch** | Where tensors, autograd & training meet — the framework as the production version of 2–4 | 🔜 Planned | PyTorch docs, ezyang |
-| 6 | **Attention** | The idea that changed everything — query/key/value, and why it's mostly matmuls | 🔜 Planned | Vaswani et al.; Jay Alammar |
-| 7 | **Transformers & LLMs** | The full architecture, end to end — tokens, embeddings, blocks, inference | 🔜 Planned | Karpathy, *nanoGPT*; B. Bycroft |
-| 8 | **What's Next** | Scaling laws, mixture-of-experts, efficiency, multimodal — the frontier | 🔜 Planned | (researched fresh) |
+| 1 | [**How GPUs Work**](./01-how-gpus-work.html) | Parallel hardware & the execution model — why thousands of slow cores beat a few fast ones | ✅ Live | NVIDIA docs · Hwu et al. · Upadhyay |
+| 2 | [**Tensors**](./02-tensors.html) | The data structure of AI — shape, strides, dtypes, and how every op maps to a GPU kernel | ✅ Live | PyTorch & NumPy docs · ezyang |
+| 3 | [**Matmul**](./03-matmul.html) | The one operation that runs the world — GEMM, tiling, tensor cores, memory- vs compute-bound | ✅ Live | Simon Boehm · NVIDIA docs · roofline |
+| 4 | [**How Machines Learn**](./04-how-machines-learn.html) | Gradients, autograd & the training loop — the chain rule, made mechanical | ✅ Live | Karpathy *micrograd* · PyTorch · DL book |
+| 5 | [**PyTorch**](./05-pytorch.html) | Where tensors, autograd & training meet — the framework as the production version of 2–4 | ✅ Live | PyTorch docs · ezyang |
+| 6 | [**Attention**](./06-attention.html) | The idea that changed everything — query/key/value, and why it's mostly matmuls | ✅ Live | Vaswani et al. · Jay Alammar |
+| 7 | [**Transformers & LLMs**](./07-transformers-llms.html) | The full architecture, end to end — tokens, embeddings, blocks, inference | ✅ Live | Vaswani · Karpathy *nanoGPT* · Bycroft |
+| 8 | [**What's Next**](./08-whats-next.html) | Scaling & reasoning, mixture-of-experts, efficiency, multimodal & agents — the frontier | ✅ Live | researched fresh (mid-2026) |
 
 ## How these are built
 

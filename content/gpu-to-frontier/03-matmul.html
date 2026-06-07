@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matmul: the operation that runs the world — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #3 Matmul extras ---- */
+  .rl-track{position:relative;height:34px;border-radius:8px;border:1px solid var(--line);overflow:hidden;margin:10px 0 4px;
+    background:linear-gradient(90deg, rgba(210,153,34,.20) 0 50%, rgba(63,185,80,.18) 50% 100%)}
+  .rl-fill{height:100%;background:rgba(88,166,255,.45);width:1%;transition:width .15s}
+  .rl-divider{position:absolute;top:-2px;bottom:-2px;left:50%;width:2px;background:var(--muted)}
+  .rl-zones{display:flex;justify-content:space-between;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .rl-zones .mb{color:var(--amber)} .rl-zones .cb{color:var(--green)}
+  .rl-out{font-size:.9rem;margin-top:12px}
+  .rl-out b{color:var(--accent)}
+  .tilewrap{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .tilegrid{display:grid;gap:2px}
+  .tcell{width:15px;height:15px;border-radius:2px;background:var(--panel2);border:1px solid var(--line)}
+  .tcell.tile{background:var(--amber)}
+  .tcell.reuse{background:rgba(63,185,80,.4);border-color:var(--green)}
+  .tlbl{font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:4px}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #3</div>
+    <h1>Matmul: the operation that runs the world</h1>
+    <p class="sub">Almost all of an AI model's compute is one humble operation — matrix multiply. The math is trivial. Making it fast is the whole game, and it turns out to be a memory problem, not a math one.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#what">1 · What it computes</a>
+      <a href="#naive">2 · The naive kernel</a>
+      <a href="#roofline">3 · Memory- vs compute-bound</a>
+      <a href="#tiling">4 · Tiling</a>
+      <a href="#tensorcores">5 · Tensor cores</a>
+      <a href="#everything">6 · Everything is matmul</a>
+      <a href="#library">7 · Use the library</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from Simon Boehm's CUDA-matmul worklog, the roofline-model literature, and NVIDIA's docs — verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: the trivial loop that eats every GPU</h2>
+    <div class="plain"><b>In plain words:</b> matrix multiply is three nested loops you could write in a minute — and it's where nearly all of an AI model's time goes. The hard part isn't the math; it's feeding the math units fast enough.</div>
+    <p>You've met this idea twice already: explainer #1 (§10) and #2 (§6) both said <em>AI is mostly matmul</em>. Here's the operation itself — the textbook triple loop:</p>
+    <div class="codecard" style="max-width:460px">
+      <div class="head">Matrix multiply <span class="where">C = A · B</span></div>
+<pre class="code"><span class="kw">for</span> i <span class="kw">in</span> range(N):
+  <span class="kw">for</span> j <span class="kw">in</span> range(N):
+    <span class="kw">for</span> k <span class="kw">in</span> range(N):
+      C[i][j] += A[i][k] * B[k][j]</pre>
+    </div>
+    <p>That's the whole operation: every cell of <code>C</code> is a row of <code>A</code> dotted with a column of <code>B</code>. Nothing clever. Yet training a large model can spend <b>90%+ of its time</b> right here. So the interesting question isn't "what does it compute" — it's:</p>
+    <p style="text-align:center;font-size:1.06rem;color:var(--accent);font-weight:700;margin:16px 0">The math is dead simple — so why is <em>fast</em> matmul so hard?</p>
+    <div class="key"><b>The answer, in one line:</b> a GPU can do the multiplies far faster than it can fetch the numbers to multiply. Fast matmul is the art of <b>reusing data</b> so the math units never starve. Everything below is that one idea.</div>
+  </section>
+
+  <section id="what">
+    <h2><span class="num">1</span> What matmul computes (and how much)</h2>
+    <div class="plain"><b>In plain words:</b> each output cell is one dot product. There are N² cells, each costing ~2N operations — so the work grows as N³.</div>
+    <p>For an N×N times N×N multiply, every output cell <code>C[i][j]</code> is a dot product down a row of A and a column of B: N multiplies and N adds. So:</p>
+    <ul class="ann">
+      <li><b>N² output cells</b>, each ≈ <b>2N FLOPs</b> (a multiply + an add, N times) → <b>2N³ total FLOPs</b>. Double N and the work goes up <b>8×</b>.</li>
+      <li>Each output cell is <b>independent</b> — exactly the parallelism GPUs love (one thread per cell, from explainer #1 §10).</li>
+    </ul>
+    <p>The math couldn't be simpler or more parallel. The trouble is entirely in <em>where the numbers live</em>.</p>
+  </section>
+
+  <section id="naive">
+    <h2><span class="num">2</span> The naive kernel re-reads everything</h2>
+    <div class="plain"><b>In plain words:</b> the obvious one-thread-per-cell kernel fetches every input from slow memory over and over — the same numbers, thousands of times.</div>
+    <p>The natural GPU version is explainer #1's pattern: one thread per output cell, looping over <code>k</code>:</p>
+    <div class="codecard" style="max-width:540px">
+      <div class="head">Naive matmul kernel <span class="where">one thread per output cell</span></div>
+<pre class="code"><span class="ty">int</span> row = blockIdx.y*blockDim.y + threadIdx.y;
+<span class="ty">int</span> col = blockIdx.x*blockDim.x + threadIdx.x;
+<span class="ty">float</span> acc = <span class="nm">0</span>;
+<span class="kw">for</span> (<span class="ty">int</span> k = <span class="nm">0</span>; k &lt; N; k++)
+    acc += A[row*N + k] * B[k*N + col];   <span class="cm">// both reads hit slow global memory</span>
+C[row*N + col] = acc;</pre>
+    </div>
+    <p>It's correct, and it works. But look at the reads. Every thread pulls a full row of A and a full column of B straight from <b>global memory</b> (the slow, far tier from #1, §3). And the thread next door, computing the cell beside it, re-reads almost the same row of A all over again.</p>
+
+    <div class="key" style="border-left-color:var(--amber)"><b>Worked example — N = 1024:</b><br>
+      • <b>Math:</b> 2·N³ ≈ <b>2.1 billion FLOPs</b>.<br>
+      • <b>Memory (naive):</b> each cell reads 2N numbers; over N² cells that's 2·N³ ≈ <b>2.1 billion reads</b> — meaning <b>every element of A and B is fetched ~1,024 times</b>.<br>
+      • That's only <b>~0.25 FLOPs per byte</b> (4-byte floats). An A100 needs roughly <b>12+ FLOPs/byte</b> to keep its math units fed — so the naive kernel leaves the cores almost entirely idle, waiting on memory.</div>
+  </section>
+
+  <section id="roofline">
+    <h2><span class="num">3</span> Memory-bound vs compute-bound (the roofline)</h2>
+    <div class="plain"><b>In plain words:</b> divide a kernel's math by the bytes it moves — that ratio (arithmetic intensity) decides whether the chip is limited by its math units or by memory bandwidth.</div>
+    <p><b>Arithmetic intensity</b> = FLOPs ÷ bytes moved. Every chip has a break-even point (its "ridge"): below it you're <b class="rl-amber" style="color:var(--amber)">memory-bound</b> — cores idle, starved for data; above it you're <b style="color:var(--green)">compute-bound</b> — finally limited by raw math, which is what you want. Naive matmul sits at 0.25, deep in the memory-bound zone.</p>
+    <p>The fix is to <b>reuse each number more times per trip to memory</b>. Drag the reuse factor and watch arithmetic intensity climb across the ridge:</p>
+    <div class="stage">
+      <label style="font-size:.85rem;display:block;margin-bottom:4px">Values reused per load (tile size <b id="rlTval" style="color:var(--accent)">1</b>) <span class="muted">— 1 = naive</span></label>
+      <input type="range" id="rlT" min="1" max="64" step="1" value="1" style="width:100%;max-width:420px">
+      <div class="rl-zones"><span class="mb">← memory-bound (cores idle)</span><span class="cb">compute-bound (cores busy) →</span></div>
+      <div class="rl-track"><div class="rl-fill" id="rlFill"></div><div class="rl-divider"></div></div>
+      <div class="rl-out" id="rlOut"></div>
+    </div>
+    <p class="muted">Bigger reuse → higher arithmetic intensity → you cross the ridge into compute-bound. That single idea — reuse — is the entire optimization, and §4 is how you actually do it. <span style="opacity:.7">(Numbers illustrative; ridge ≈ an A100-class balance point.)</span></p>
+  </section>
+
+  <section id="tiling">
+    <h2><span class="num">4</span> Big idea #1: shared-memory tiling</h2>
+    <div class="plain"><b>In plain words:</b> load a small square tile of A and B into the SM's fast shared memory once, and let every thread in the tile reuse it — instead of each thread fetching from slow memory itself.</div>
+    <p>Here's the reuse from §3, made real, using the <b>shared memory</b> scratchpad from explainer #1 (§3). Instead of every thread reading from global memory, the block cooperates:</p>
+    <ul class="ann">
+      <li>Threads load one <b>T×T tile</b> of A and one of B from global memory into <b>shared memory</b> (fast, on-chip) — with coalesced, neighbour-friendly reads (#1, §8).</li>
+      <li>Every thread then does its multiply-adds reading from <b>shared memory</b>, reusing each loaded value <b>T times</b>.</li>
+      <li>Slide to the next tile along <code>k</code>, accumulate, repeat.</li>
+    </ul>
+    <p>Net effect: each element comes from slow global memory <b>once per tile</b> instead of N times. Global reads drop by roughly a factor of T, arithmetic intensity rises ~T×, and the kernel crosses the ridge into <b>compute-bound</b> — exactly the slider in §3.</p>
+    <div class="tilewrap">
+      <div><div class="tlbl">A (one tile loaded)</div><div class="tilegrid" id="tileA"></div></div>
+      <div class="bcop" style="font-size:1.3rem;color:var(--muted)">→</div>
+      <div><div class="tlbl">shared memory<br>(reused by all threads)</div><div class="tilegrid" id="tileS"></div></div>
+    </div>
+    <div class="key"><b>The takeaway:</b> tiling doesn't change the math by one FLOP — it changes how often you touch memory. That's the whole job: keep hot data close and reuse it, so the math units stay fed. (This is also why the §1 memory hierarchy exists.)</div>
+  </section>
+
+  <section id="tensorcores">
+    <h2><span class="num">5</span> Big idea #2: tensor cores</h2>
+    <div class="plain"><b>In plain words:</b> tensor cores are hardware that multiplies a whole small matrix in a single instruction — purpose-built for exactly this operation.</div>
+    <p>Tiling feeds the math units; <b>tensor cores</b> make the math units themselves enormously faster <em>at this one operation</em>. Instead of doing one multiply-add at a time, a tensor core multiplies a small matrix tile (e.g. 16×16) and accumulates it in a <b>single operation</b> — dozens of multiply-adds at once.</p>
+    <p>The catch (and the link back): they run fastest at <b>low precision</b> — fp16 / bf16 from explainer #2 (§4). That's why those dtypes matter so much, and why a GPU's fp16 tensor-core throughput is ~10× its fp32 number (#1, §1 — FLOPS depends on precision). Tensor cores are the same specialization that, taken to the extreme, becomes a TPU (#1, §11).</p>
+    <div class="key"><b>Two levers, one goal:</b> tiling keeps the data flowing; tensor cores crunch it in bulk. Together they turn matmul from memory-starved to near the hardware's peak.</div>
+  </section>
+
+  <section id="everything">
+    <h2><span class="num">6</span> Why this one operation is worth a whole explainer</h2>
+    <div class="plain"><b>In plain words:</b> the big operations in a neural network — linear layers, convolutions, attention — are all matrix multiplies in disguise. Speed up GEMM and you speed up all of AI.</div>
+    <p><b>GEMM</b> (general matrix multiply) is the workhorse the whole field is built on:</p>
+    <ul class="ann">
+      <li><b>Linear / fully-connected layers</b> — literally <code>y = W·x</code>. A matmul.</li>
+      <li><b>Convolutions</b> — unrolled into a matmul (im2col) or run as an "implicit GEMM."</li>
+      <li><b>Attention</b> (the engine of transformers, coming in #6) — a stack of matmuls: <code>Q·Kᵀ</code>, then <code>·V</code>.</li>
+    </ul>
+    <p>So this isn't one operation among many — it's <em>the</em> operation. Every hour spent optimizing GEMM pays off across every model, which is exactly why GPUs, tensor cores, and TPUs are all shaped around it.</p>
+  </section>
+
+  <section id="library">
+    <h2><span class="num">7</span> In practice: don't write your own</h2>
+    <div class="plain"><b>In plain words:</b> you almost never hand-write matmul. You call a tuned library that's already squeezed the hardware dry.</div>
+    <p>Understanding tiling and tensor cores is essential for <em>reasoning</em> about performance — but in real code you call <b>cuBLAS</b> (or cuDNN, CUTLASS). These are hand-tuned to each GPU, juggling tile sizes, bank conflicts, vectorized loads, and warp-level scheduling. Simon Boehm's worklog shows it takes around a dozen escalating optimizations for a careful hand-written kernel just to <em>approach</em> cuBLAS — and PyTorch already calls these libraries for you under <code>C = A @ B</code>.</p>
+    <div class="key"><b>The honest takeaway:</b> know how matmul gets fast so you can spot when you're memory-bound or using the wrong precision — but reach for the library to actually run it.</div>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>Matrix multiply is <b>2N³</b> independent multiply-adds — trivial math, perfect parallelism. The naive one-thread-per-cell kernel re-reads every input ~N times from slow global memory, giving an <b>arithmetic intensity</b> of ~0.25 FLOPs/byte: deeply <b>memory-bound</b>, cores idle. The cure is <b>reuse</b>. <b>Shared-memory tiling</b> loads a tile once and reuses each value T times, raising arithmetic intensity across the <b>roofline</b> ridge into <b>compute-bound</b>; <b>tensor cores</b> then crunch small matrix tiles in one instruction, fastest at fp16/bf16. Because linear layers, convolutions, and attention are all <b>GEMM</b>, this one optimization accelerates everything — and in practice you let <b>cuBLAS</b> do it.</p>
+    <div class="rcap-flow"><span class="n">2N³ FLOPs</span><span class="a">→</span><span class="n">naive: memory-bound</span><span class="a">→</span><span class="n hl">tiling = reuse</span><span class="a">→</span><span class="n">compute-bound</span><span class="a">→</span><span class="n">tensor cores</span><span class="a">→</span><span class="n go">cuBLAS</span></div>
+    <p class="muted" style="margin-top:14px">Next up: <b>#4 · How Machines Learn</b> — stacking matmuls computes things, but how does a model <em>learn</em> the numbers inside them? Gradients, autograd, and the training loop.</p>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Concepts and figures here were checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://siboehm.com/articles/22/CUDA-MMM" target="_blank" rel="noopener">Simon Boehm, "How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance"</a> — <span>the step-by-step worklog: naive → coalesced → shared-memory tiling → near cuBLAS.</span></li>
+      <li><a href="https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html" target="_blank" rel="noopener">NVIDIA — Matrix Multiplication Background &amp; GPU Performance</a> — <span>arithmetic intensity, memory- vs math-bound, and tensor-core behaviour.</span></li>
+      <li><a href="https://docs.nvidia.com/cuda/cublas/" target="_blank" rel="noopener">NVIDIA cuBLAS documentation</a> — <span>the tuned GEMM library you actually call in practice.</span></li>
+      <li><a href="https://en.wikipedia.org/wiki/Roofline_model" target="_blank" rel="noopener">The Roofline model</a> — <span>the FLOPs-per-byte vs peak-performance picture behind §3.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> · part of the <b style="color:var(--ink)">Explainers</b> series.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- Roofline / reuse slider ---- */
+  var RIDGE=12;          // illustrative FLOPs/byte break-even (A100-class)
+  var SCALE=24;          // track spans 0..24 FLOPs/byte; ridge sits at 50%
+  var rlT=document.getElementById('rlT'), rlFill=document.getElementById('rlFill'),
+      rlOut=document.getElementById('rlOut'), rlTval=document.getElementById('rlTval');
+  function renderRL(){
+    var T=+rlT.value;
+    var ai=0.25*T;                       // reuse T values per load → ~T× the naive 0.25
+    rlTval.textContent=T;
+    rlFill.style.width=Math.min(100, ai/SCALE*100)+'%';
+    var bound = ai < RIDGE ? 'memory-bound' : 'compute-bound';
+    var col = ai < RIDGE ? 'var(--amber)' : 'var(--green)';
+    rlOut.innerHTML='Tile <b>'+T+'</b> → each value reused ~'+T+'× → arithmetic intensity ≈ <b>'+ai.toFixed(2)+'</b> FLOPs/byte → '+
+      '<b style="color:'+col+'">'+bound+'</b>'+(ai<RIDGE?' — math units idle, waiting on memory.':' — finally limited by raw math. 🎯');
+  }
+  if(rlT){ rlT.addEventListener('input',renderRL); renderRL(); }
+
+  /* ---- Tiling diagram ---- */
+  function buildTile(id, n, cls){
+    var el=document.getElementById(id); if(!el) return;
+    el.style.gridTemplateColumns='repeat('+n+',1fr)';
+    for(var i=0;i<n*n;i++){
+      var r=Math.floor(i/n), c=i%n, inTile=(r<3 && c<3);
+      var d=document.createElement('div'); d.className='tcell'+(inTile?' '+cls:''); el.appendChild(d);
+    }
+  }
+  buildTile('tileA',8,'tile');   // a 3×3 tile highlighted inside an 8×8 matrix
+  buildTile('tileS',3,'reuse');  // the tile sitting in shared memory
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Matrix multiply (matmul / GEMM)','C = A·B: each output cell is a row of A dotted with a column of B. GEMM = general matrix multiply, the library name for it.'],
+    ['FLOP','One floating-point operation (a multiply or an add). An N×N matmul is ~2N³ FLOPs.'],
+    ['Arithmetic intensity','FLOPs done per byte of memory moved. The single number that predicts whether you are memory- or compute-bound.'],
+    ['Memory-bound','The math units sit idle waiting for data — performance is capped by memory bandwidth, not compute. Naive matmul (~0.25 FLOPs/byte) is here.'],
+    ['Compute-bound','Data arrives fast enough that you are limited by raw math throughput — the good place to be.'],
+    ['Roofline model','A plot of achievable performance vs arithmetic intensity: a diagonal memory-bandwidth ceiling meets a flat compute ceiling at the "ridge".'],
+    ['Tiling','Loading small square tiles of A and B into fast shared memory so each value, fetched once, is reused many times. Raises arithmetic intensity.'],
+    ['Shared memory','The SM\'s fast on-chip scratchpad (explainer #1, §3), shared by a block of threads — where tiles live during matmul.'],
+    ['Tensor core','Hardware that multiplies a small matrix tile (e.g. 16×16) and accumulates it in one instruction. Fastest at fp16 / bf16.'],
+    ['cuBLAS / cuDNN / CUTLASS','NVIDIA\'s hand-tuned libraries that implement GEMM near the hardware peak. What you actually call in practice.'],
+    ['im2col','Unrolling a convolution into a matrix multiply so it can use the same fast GEMM machinery.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>

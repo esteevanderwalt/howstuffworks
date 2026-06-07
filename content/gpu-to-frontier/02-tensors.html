@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tensors: the data structure of AI — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #2 Tensors extras ---- */
+  .svlabel{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:10px 0 4px}
+  .sv-grid{display:grid;gap:4px;max-width:340px}
+  .sv-logic{aspect-ratio:1;border-radius:6px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--ink);cursor:pointer;transition:transform .1s}
+  .sv-logic:hover{border-color:var(--accent)}
+  .sv-logic.hot{background:var(--amber);color:#04101f;font-weight:800;border-color:var(--amber);transform:scale(1.08)}
+  .sv-store{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+  .sv-cell{aspect-ratio:1;border-radius:4px;background:#0b1019;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.66rem;color:var(--muted)}
+  .sv-cell.hot{background:var(--amber);color:#04101f;font-weight:800;border-color:var(--amber)}
+  .svmeta{font-family:"SF Mono",Menlo,monospace;font-size:.84rem;margin:10px 0;color:var(--ink)}
+  .svmeta b{color:var(--accent)}
+  /* dtype bits */
+  .bits{width:100%;background:#0b1019;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:4px}
+  .bitbar{display:flex;height:30px;border-radius:5px;overflow:hidden}
+  .seg{display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:700;color:#04101f;white-space:nowrap}
+  .seg-s{background:var(--accent)} .seg-e{background:var(--amber)} .seg-m{background:var(--green)}
+  .bitnote{font-size:.72rem;color:var(--muted);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+  .bitnote i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:-1px}
+  /* broadcast mini grids */
+  .bc{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .bcg{display:grid;gap:3px}
+  .bcc{width:24px;height:24px;border-radius:4px;background:var(--panel2);border:1px solid var(--line)}
+  .bcc.stretch{background:rgba(188,140,255,.3);border-color:var(--purple);border-style:dashed}
+  .bcop{font-size:1.3rem;color:var(--muted)}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #2</div>
+    <h1>Tensors: the data structure of AI</h1>
+    <p class="sub">Every number a neural network touches lives in a tensor. The surprise for a programmer is how it's stored — and that one fact explains almost everything tensors do.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#anatomy">1 · Anatomy</a>
+      <a href="#views">2 · Free views</a>
+      <a href="#contig">3 · Contiguous?</a>
+      <a href="#dtypes">4 · dtypes</a>
+      <a href="#broadcast">5 · Broadcasting</a>
+      <a href="#kernel">6 · Op → kernel</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from the PyTorch &amp; NumPy documentation and Edward Z. Yang's "PyTorch internals" — verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: it's a grid in your head, a line in memory</h2>
+    <div class="plain"><b>In plain words:</b> a tensor is an n-dimensional array — but it's stored as one flat line of numbers plus a tiny note saying how to fold that line into a grid.</div>
+    <p>You already picture a matrix as a grid. Say a 3×4 of numbers:</p>
+    <div class="codecard" style="max-width:420px">
+      <div class="head">PyTorch <span class="where">a 3×4 tensor</span></div>
+<pre class="code"><span class="kw">import</span> torch
+x = torch.arange(<span class="nm">12</span>).reshape(<span class="nm">3</span>, <span class="nm">4</span>)
+<span class="cm"># tensor([[ 0,  1,  2,  3],</span>
+<span class="cm">#         [ 4,  5,  6,  7],</span>
+<span class="cm">#         [ 8,  9, 10, 11]])</span></pre>
+    </div>
+    <p>In your head that's a 3×4 grid. <b>In memory it is not.</b> The hardware only has one long, flat run of slots — so the twelve numbers are stored as a single line, <code>0 1 2 3 4 5 6 7 8 9 10 11</code>, plus a little metadata that says "read this 4 at a time as rows." The grid is an <em>interpretation</em>, not the storage.</p>
+    <div class="key"><b>The one idea:</b> a tensor = <b>a flat buffer of numbers</b> + <b>metadata describing how to read it</b>. Hold onto that — it explains why reshape and transpose are instant, why some operations suddenly make copies, and how a tensor op turns into the GPU kernels from explainer #1.</div>
+    <p class="muted">This is the data those millions of GPU threads (#1) actually chew on. Now let's open it up.</p>
+  </section>
+
+  <section id="anatomy">
+    <h2><span class="num">1</span> Anatomy of a tensor</h2>
+    <div class="plain"><b>In plain words:</b> the flat line of numbers is the <em>storage</em>; the metadata is <em>shape</em> (the dimensions), <em>strides</em> (how far to jump per step), and <em>dtype</em> (what each number is).</div>
+    <p>Four pieces describe any tensor:</p>
+    <ul class="ann">
+      <li><b>Storage</b> — the flat 1-D buffer holding the actual numbers. Several tensors can share one storage.</li>
+      <li><b>Shape</b> — the size of each dimension, e.g. <code>(3, 4)</code>.</li>
+      <li><b>Stride</b> — for each dimension, how many <em>storage</em> slots to skip to take one step along it. A contiguous 3×4 has stride <code>(4, 1)</code>: step a row → jump 4 slots; step a column → jump 1.</li>
+      <li><b>dtype</b> — what each element is (32-bit float, 16-bit float, int…). More on this in §4.</li>
+    </ul>
+    <p>To find any element, the tensor just does arithmetic on the strides:</p>
+    <div class="key" style="border-left-color:var(--accent)"><code>storage_index = offset + row × stride₀ + col × stride₁</code><br><span class="muted">No grid, no rows-of-rows — just one multiply-add into a flat array. Click a cell below to watch it happen.</span></div>
+
+    <div class="stage">
+      <div class="toggle">
+        <button id="svOrig" class="on">3×4 (original)</button>
+        <button id="svT">transpose → 4×3</button>
+      </div>
+      <div class="svmeta" id="svMeta"></div>
+      <div class="svlabel">Logical view <span style="text-transform:none">(click a cell)</span></div>
+      <div class="sv-grid" id="svGrid"></div>
+      <div class="svlabel">Storage — one flat buffer (never changes)</div>
+      <div class="sv-store" id="svStore"></div>
+      <div class="formula" id="svFormula"></div>
+    </div>
+  </section>
+
+  <section id="views">
+    <h2><span class="num">2</span> Free views: reshape &amp; transpose move no data</h2>
+    <div class="plain"><b>In plain words:</b> reshape and transpose don't touch the numbers — they just rewrite the little metadata note. Instant, even on a huge tensor.</div>
+    <p>Because the grid is only an interpretation, you can re-interpret the same storage a different way by changing the metadata — <b>without moving a single number</b>. Hit "transpose" in the tool above: the storage stays put, but the <b>strides swap</b> from <code>(4, 1)</code> to <code>(1, 4)</code>, and suddenly the same flat line reads as a 4×3.</p>
+    <div class="analogy"><b>Analogy:</b> the numbers are a row of houses on a street. A "view" is just a new set of walking directions ("take every 4th house"), not a rebuilt street. Transpose hands you different directions to the same houses.</div>
+    <p>A tensor produced this way is called a <b>view</b>: it shares storage with the original. Edit one and the other changes too — they're two notes pointing at the same numbers. This is why <code>reshape</code>, <code>transpose</code>, slicing, and <code>squeeze</code> are effectively free.</p>
+  </section>
+
+  <section id="contig">
+    <h2><span class="num">3</span> Contiguous (and when an op secretly copies)</h2>
+    <div class="plain"><b>In plain words:</b> a tensor is "contiguous" when its numbers sit in memory in the same order you'd read them row-by-row. Transpose breaks that — and fixing it forces a copy.</div>
+    <p>A freshly made tensor is <b>contiguous</b>: walking it row-by-row also walks the storage left-to-right (stride <code>(4, 1)</code>). But the transposed view has stride <code>(1, 4)</code> — reading it row-by-row now <em>hops around</em> the storage. That's a <b>non-contiguous</b> tensor: same data, out-of-order access.</p>
+    <p>Most of the time you'll never notice. But some operations need the data laid out in order, so they either error or quietly call <b>.contiguous()</b> — which finally <b>makes a real copy</b>, writing the numbers into a fresh, in-order buffer:</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">PyTorch <span class="where">the classic gotcha</span></div>
+<pre class="code">x = torch.arange(<span class="nm">12</span>).reshape(<span class="nm">3</span>, <span class="nm">4</span>)
+xt = x.t()              <span class="cm"># transpose — a free view, non-contiguous</span>
+xt.is_contiguous()      <span class="cm"># False</span>
+xt.view(<span class="nm">12</span>)            <span class="cm"># RuntimeError: view needs contiguous memory</span>
+xt.contiguous().view(<span class="nm">12</span>)   <span class="cm"># works — but this one made a copy</span>
+xt.reshape(<span class="nm">12</span>)         <span class="cm"># reshape just does the .contiguous() for you</span></pre>
+    </div>
+    <div class="key"><b>The takeaway:</b> views are free, but the moment something needs contiguous memory, you pay for one copy. Knowing <em>which</em> ops copy is a big part of writing fast, memory-light tensor code.</div>
+  </section>
+
+  <section id="dtypes">
+    <h2><span class="num">4</span> dtypes &amp; precision: how big is one number?</h2>
+    <div class="plain"><b>In plain words:</b> the dtype is how many bits each number gets. Fewer bits = less memory and more speed — the trick that powers modern AI.</div>
+    <p>Every element of a tensor is the same type. For deep learning the choice is usually between three floating-point formats — and it's a real trade-off between <em>range</em>, <em>precision</em>, and <em>cost</em>. A float splits its bits into a <span style="color:var(--accent)">sign</span>, an <span style="color:var(--amber)">exponent</span> (range), and a <span style="color:var(--green)">mantissa</span> (precision):</p>
+
+    <div class="stage">
+      <div class="toggle">
+        <button id="dtF32" class="on">fp32</button>
+        <button id="dtF16">fp16</button>
+        <button id="dtBf16">bf16</button>
+      </div>
+      <div class="bits"><div class="bitbar" id="dtBar"></div>
+        <div class="bitnote"><span><i style="background:var(--accent)"></i>sign</span><span><i style="background:var(--amber)"></i>exponent (range)</span><span><i style="background:var(--green)"></i>mantissa (precision)</span></div>
+      </div>
+      <div class="cost" id="dtOut" style="margin-top:12px"></div>
+    </div>
+
+    <p>The width of the bar is the memory each number takes — <b>fp16 and bf16 are literally half of fp32</b>. That halves memory <em>and</em> roughly doubles math throughput on tensor cores (remember FLOPS depends on precision, from #1). <b>bf16</b> is the training favourite because it keeps fp32's full exponent — the same <em>range</em>, so values rarely overflow — while spending fewer bits on precision.</p>
+    <div class="key"><b>Why you care:</b> lower precision is how giant models fit in memory and train fast. It's the same lever the tensor cores and TPUs from explainer #1 (§10–11) are built to pull.</div>
+  </section>
+
+  <section id="broadcast">
+    <h2><span class="num">5</span> Broadcasting: combining mismatched shapes</h2>
+    <div class="plain"><b>In plain words:</b> when shapes don't match, a size-1 dimension gets "stretched" to fit — without copying, by setting its stride to 0.</div>
+    <p>You constantly add tensors of different shapes — e.g. add a length-4 bias to every row of a 3×4. Broadcasting lines the shapes up from the right and stretches any dimension of size 1 to match:</p>
+    <div class="stage">
+      <div class="bc">
+        <div><div class="svlabel" style="text-align:center">(3,1)</div><div class="bcg" id="bcA"></div></div>
+        <div class="bcop">+</div>
+        <div><div class="svlabel" style="text-align:center">(1,4)</div><div class="bcg" id="bcB"></div></div>
+        <div class="bcop">=</div>
+        <div><div class="svlabel" style="text-align:center">(3,4)</div><div class="bcg" id="bcC"></div></div>
+      </div>
+    </div>
+    <p>The elegant part: the stretch is <b>free</b>. A broadcast dimension is given a <b>stride of 0</b> — so every step along it reads the <em>same</em> element instead of advancing. No data is duplicated; the strides just lie a little. (Same trick as views, §2.)</p>
+  </section>
+
+  <section id="kernel">
+    <h2><span class="num">6</span> From a tensor op to a GPU kernel</h2>
+    <div class="plain"><b>In plain words:</b> an operation on a tensor is just a GPU kernel from explainer #1, launched over the flat buffer — one thread per element.</div>
+    <p>Here's where the two explainers meet. When you write <code>C = A + B</code> on tensors, the framework launches a kernel over the storage with <b>one thread per element</b> — the <em>exact</em> vector-add kernel from explainer #1:</p>
+    <div class="codecard" style="max-width:540px">
+      <div class="head">The same idea, two levels <span class="where">tensor op → kernel</span></div>
+<pre class="code"><span class="cm"># what you write (tensors)</span>
+C = A + B
+
+<span class="cm"># what the GPU runs (explainer #1's kernel)</span>
+i = blockIdx.x * blockDim.x + threadIdx.x
+<span class="kw">if</span> (i &lt; N) C[i] = A[i] + B[i]</pre>
+    </div>
+    <p>The tensor is the <b>data</b>; the kernel is the <b>compute</b>; the strides tell each thread which slot of the flat buffer to touch. Element-wise ops (add, ReLU) are one thread per element. The heavy hitter — <b>matrix multiply</b> — is a bigger, cleverer kernel, and it's so central to everything that it gets its own explainer next.</p>
+    <div class="key"><b>Full circle:</b> explainer #1 gave you the machine; this one gave you the data it runs on. Put them together and you can read almost any line of deep-learning code as "launch a kernel over some tensors."</div>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>A <b>tensor</b> is a flat <b>storage</b> buffer plus metadata: <b>shape</b>, <b>strides</b>, and a <b>dtype</b>. To read element <code>[r][c]</code> it computes <code>r·stride₀ + c·stride₁</code> into the flat buffer — so <b>reshape and transpose are free</b> (just rewrite the strides) and produce <b>views</b> that share storage. Re-striding can make a tensor <b>non-contiguous</b>, and the moment an op needs ordered memory it calls <b>.contiguous()</b> and pays for one copy. The <b>dtype</b> sets how many bits each number gets — <b>fp16/bf16</b> halve memory and speed up the math. <b>Broadcasting</b> stretches size-1 dimensions for free with a <b>stride of 0</b>. And every tensor op is just a GPU kernel from explainer #1 launched over the buffer.</p>
+    <div class="rcap-flow"><span class="n">flat buffer</span><span class="a">→</span><span class="n">+ shape &amp; strides</span><span class="a">→</span><span class="n hl">free views</span><span class="a">→</span><span class="n">dtype</span><span class="a">→</span><span class="n go">op = GPU kernel</span></div>
+    <p class="muted" style="margin-top:14px">Next up: <b>#3 · Matmul</b> — the one operation that dominates everything, and how it's made fast.</p>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Every behaviour here was checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://docs.pytorch.org/docs/stable/tensor_view.html" target="_blank" rel="noopener">PyTorch — Tensor Views</a> — <span>which ops return views, and that views share storage.</span></li>
+      <li><a href="https://docs.pytorch.org/docs/stable/tensors.html" target="_blank" rel="noopener">PyTorch — torch.Tensor</a> — <span>strides, dtypes, <code>.contiguous()</code>, <code>.view()</code> vs <code>.reshape()</code>.</span></li>
+      <li><a href="https://numpy.org/doc/stable/reference/arrays.ndarray.html" target="_blank" rel="noopener">NumPy — the N-dimensional array</a> — <span>the storage-plus-strides model that PyTorch shares, and broadcasting.</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers that inspired this one</b> — worth your time:</p>
+    <ul class="refs">
+      <li><a href="https://blog.ezyang.com/2019/05/pytorch-internals/" target="_blank" rel="noopener">Edward Z. Yang, "PyTorch internals"</a> <span>— the clearest tour of storage, strides, and views.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> · part of the <b style="color:var(--ink)">Explainers</b> series.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- Strides visualizer ---- */
+  var views={
+    orig:{r:3,c:4,s:[4,1],label:'shape <b>(3, 4)</b> · stride <b>(4, 1)</b> · contiguous ✓'},
+    t:{r:4,c:3,s:[1,4],label:'shape <b>(4, 3)</b> · stride <b>(1, 4)</b> · non-contiguous ✗'}
+  };
+  var cur='orig';
+  var svStore=document.getElementById('svStore'), svGrid=document.getElementById('svGrid'),
+      svMeta=document.getElementById('svMeta'), svFormula=document.getElementById('svFormula');
+  if(svStore){
+    for(var i=0;i<12;i++){var d=document.createElement('div');d.className='sv-cell';d.id='svs'+i;d.textContent=i;svStore.appendChild(d);}
+  }
+  function clearHot(){
+    document.querySelectorAll('.sv-cell.hot').forEach(function(e){e.classList.remove('hot');});
+    document.querySelectorAll('.sv-logic.hot').forEach(function(e){e.classList.remove('hot');});
+  }
+  function buildGrid(){
+    var v=views[cur];
+    svGrid.style.gridTemplateColumns='repeat('+v.c+',1fr)';
+    svGrid.style.maxWidth=(v.c*54)+'px';
+    svGrid.innerHTML='';
+    for(var r=0;r<v.r;r++)for(var c=0;c<v.c;c++){
+      var idx=r*v.s[0]+c*v.s[1];
+      var d=document.createElement('div');d.className='sv-logic';d.textContent=idx;
+      d.dataset.r=r;d.dataset.c=c;d.dataset.idx=idx;
+      d.addEventListener('click',function(){
+        clearHot();
+        var rr=+this.dataset.r, cc=+this.dataset.c, ix=+this.dataset.idx;
+        this.classList.add('hot');
+        document.getElementById('svs'+ix).classList.add('hot');
+        svFormula.innerHTML='storage_index = <span class="b">'+rr+'</span>·'+v.s[0]+' + <span class="t">'+cc+'</span>·'+v.s[1]+' = <span class="r">'+ix+'</span>';
+      });
+      svGrid.appendChild(d);
+    }
+    svMeta.innerHTML=v.label;
+    svFormula.innerHTML='<span class="muted">Click a logical cell to see it land in the flat buffer.</span>';
+  }
+  var svO=document.getElementById('svOrig'), svT=document.getElementById('svT');
+  if(svO){
+    svO.addEventListener('click',function(){cur='orig';svO.classList.add('on');svT.classList.remove('on');clearHot();buildGrid();});
+    svT.addEventListener('click',function(){cur='t';svT.classList.add('on');svO.classList.remove('on');clearHot();buildGrid();});
+    buildGrid();
+  }
+
+  /* ---- dtype toggle ---- */
+  var dt={
+    f32:{bits:32,s:1,e:8,m:23,t:'<b>fp32</b> — full precision, 4 bytes per number. The general-purpose default.'},
+    f16:{bits:16,s:1,e:5,m:10,t:'<b>fp16</b> — half precision: half the memory, ~2× tensor-core throughput. Its small 5-bit exponent gives limited range, so values can overflow or underflow during training.'},
+    bf16:{bits:16,s:1,e:8,m:7,t:'<b>bf16</b> (brain float) — also 16 bits, but keeps fp32’s full 8-bit exponent (same range) and spends fewer bits on precision. The modern training default.'}
+  };
+  var dtBar=document.getElementById('dtBar'), dtOut=document.getElementById('dtOut');
+  var dtBtns={f32:document.getElementById('dtF32'),f16:document.getElementById('dtF16'),bf16:document.getElementById('dtBf16')};
+  function renderDt(k){
+    var d=dt[k];
+    Object.keys(dtBtns).forEach(function(key){dtBtns[key].classList.toggle('on',key===k);});
+    dtBar.style.width=(d.bits/32*100)+'%';
+    dtBar.innerHTML='<div class="seg seg-s" style="width:'+(d.s/d.bits*100)+'%"></div>'+
+      '<div class="seg seg-e" style="width:'+(d.e/d.bits*100)+'%">'+d.e+'</div>'+
+      '<div class="seg seg-m" style="width:'+(d.m/d.bits*100)+'%">'+d.m+'</div>';
+    dtOut.innerHTML=d.t+' &nbsp;<span class="muted">('+d.bits+' bits)</span>';
+  }
+  if(dtBar){
+    Object.keys(dtBtns).forEach(function(k){dtBtns[k].addEventListener('click',function(){renderDt(k);});});
+    renderDt('f32');
+  }
+
+  /* ---- broadcasting mini grids ---- */
+  function fillBc(id,rows,cols,cls){
+    var el=document.getElementById(id); if(!el) return;
+    el.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    for(var i=0;i<rows*cols;i++){var d=document.createElement('div');d.className='bcc'+(cls?' '+cls:'');el.appendChild(d);}
+  }
+  fillBc('bcA',3,1); fillBc('bcB',1,4); fillBc('bcC',3,4,'stretch');
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Tensor','An n-dimensional array of one dtype. Physically: a flat storage buffer plus metadata (shape, strides, offset).'],
+    ['Storage','The flat 1-D buffer holding the actual numbers. Several tensors can share one storage.'],
+    ['Shape','The size of each dimension, e.g. (3, 4).'],
+    ['Stride','For each dimension, how many storage slots to skip to take one step along it. A contiguous 3×4 has stride (4, 1).'],
+    ['Offset','Where in the storage this tensor starts — lets a slice point partway into a shared buffer.'],
+    ['dtype','What each element is: fp32, fp16, bf16, int8, etc. Sets how many bits per number.'],
+    ['View','A tensor that shares another’s storage, differing only in metadata. Editing one edits the other. Reshape, transpose, and slicing return views.'],
+    ['Contiguous','The numbers sit in storage in row-major order — reading row-by-row also walks the buffer left-to-right. Transpose breaks this.'],
+    ['.contiguous()','Returns a contiguous copy of a non-contiguous tensor by writing its numbers into a fresh in-order buffer. The one place a "free" re-stride becomes a real copy.'],
+    ['reshape vs view','view() only rewrites metadata and needs contiguous memory; reshape() does the same but silently calls .contiguous() (a copy) when it must.'],
+    ['Transpose','Swaps two dimensions by swapping their strides — a free view, but non-contiguous.'],
+    ['Broadcasting','Combining tensors of different shapes by stretching size-1 dimensions to match — for free, by giving the stretched dimension a stride of 0.'],
+    ['fp32 / fp16 / bf16','32- and 16-bit floats. fp16 and bf16 use half the memory; bf16 keeps fp32’s exponent (range) but less precision — the training favourite.'],
+    ['Element-wise op','An operation applied independently to every element (add, ReLU). On a GPU: one thread per element — explainer #1’s vector-add kernel.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>

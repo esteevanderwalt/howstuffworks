@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformers &amp; LLMs: the full architecture — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #7 extras ---- */
+  .flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;margin:12px 0;font-size:.8rem}
+  .flow .node{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel2);white-space:nowrap}
+  .flow .arrow{color:var(--muted)}
+  .flow .accentn{border-color:var(--accent);color:var(--accent)}
+  .flow .greenn{border-color:var(--green);color:var(--green)}
+  .tblock{max-width:320px;margin:10px auto;border:2px dashed var(--accent);border-radius:12px;padding:10px 12px;position:relative}
+  .tblock .bl{font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+  .tbox{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:7px 0;text-align:center;font-size:.84rem}
+  .tbox.att{border-color:var(--amber)} .tbox.ffn{border-color:var(--green)}
+  .tadd{font-size:.72rem;color:var(--muted);text-align:center;margin:2px 0}
+  /* generation */
+  .genout{font-family:'SF Mono',Menlo,monospace;background:#0b1019;border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:6px;font-size:.92rem;line-height:1.6}
+  .genout .new{color:var(--green);font-weight:700}
+  .gbars{margin-top:10px}
+  .gbar-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:.8rem}
+  .gbar-row .name{width:64px;font-family:'SF Mono',Menlo,monospace;text-align:right;color:var(--muted)}
+  .gbar-track{flex:1;background:#0b1019;border-radius:4px;overflow:hidden}
+  .gbar{height:15px;background:var(--accent);border-radius:4px;min-width:2px}
+  .gbar-row .pct{width:42px;font-variant-numeric:tabular-nums}
+  .gbar-row.top .gbar{background:var(--green)} .gbar-row.top .name{color:var(--green)}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #7</div>
+    <h1>Transformers &amp; LLMs: the full architecture</h1>
+    <p class="sub">Attention is the engine. A transformer is the whole machine built around it — and a large language model is that machine, scaled up and trained to predict the next token. Here it is end to end.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#pipeline">1 · The pipeline</a>
+      <a href="#tokens">2 · Tokenization</a>
+      <a href="#embed">3 · Embeddings + position</a>
+      <a href="#block">4 · The block</a>
+      <a href="#output">5 · Stack → logits</a>
+      <a href="#generate">6 · Generation</a>
+      <a href="#training">7 · How it's trained</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from Vaswani et al., Karpathy's nanoGPT / "Let's build GPT", and the GPT papers — verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: what happens when you hit enter</h2>
+    <div class="plain"><b>In plain words:</b> a language model does one thing — predict the next token. A transformer is the machine that does it well, and "generating text" is just running that prediction in a loop.</div>
+    <p>You type a prompt and ChatGPT writes back paragraphs. Under all of it is a single, almost absurdly simple task, repeated: <b>given the text so far, what's the most likely next token?</b> Pick one, append it, ask again.</p>
+    <p>Explainer #6 gave us <b>attention</b> — how tokens share context. This explainer assembles attention, plus a few supporting parts you've already met, into the full pipeline that turns a prompt into that next-token prediction:</p>
+    <p style="text-align:center;font-size:1.02rem;color:var(--accent);font-weight:700;margin:16px 0">text → tokens → embeddings → a stack of transformer blocks → logits → next token</p>
+    <div class="key"><b>The whole explainer:</b> we'll walk that pipeline left to right, zoom into the repeating <b>transformer block</b> (it's just attention from #6 + a small network, glued with the residual/norm tricks from #4), then loop it to generate — and finally, how the thing is trained to be useful.</div>
+  </section>
+
+  <section id="pipeline">
+    <h2><span class="num">1</span> The pipeline, end to end</h2>
+    <div class="plain"><b>In plain words:</b> a prompt flows through a fixed assembly line. Each stage is something you've already seen; the rest of this explainer is just zooming into each one.</div>
+    <p>Here's the entire machine at a glance. A prompt enters on the left and a next-token prediction comes out on the right:</p>
+    <div class="flow">
+      <span class="node">text</span><span class="arrow">→</span>
+      <span class="node accentn">tokens</span><span class="arrow">→</span>
+      <span class="node">embeddings<br>+ position</span><span class="arrow">→</span>
+      <span class="node accentn">transformer<br>block × N</span><span class="arrow">→</span>
+      <span class="node">logits</span><span class="arrow">→</span>
+      <span class="node greenn">next token</span>
+    </div>
+    <p>Notice the engine is that middle box — a <b>stack of N identical transformer blocks</b> (GPT-3 has 96; small models have a dozen). Everything before it gets text into vector form; everything after turns vectors back into a word. Let's take the stages in order.</p>
+  </section>
+
+  <section id="tokens">
+    <h2><span class="num">2</span> Tokenization: text → tokens</h2>
+    <div class="plain"><b>In plain words:</b> the model doesn't see letters or words — it sees "tokens," which are common chunks of text (often word-pieces). Each token is just an ID number.</div>
+    <p>First, the text is chopped into <b>tokens</b>. Not characters (too fine) and not whole words (too many, and you'd choke on anything unseen) — but <b>subword pieces</b>, learned by an algorithm called <b>byte-pair encoding (BPE)</b> that merges frequent character pairs into chunks. Common words become one token; rare words split into a few.</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">Tokenization <span class="where">text → token IDs</span></div>
+<pre class="code"><span class="st">"tokenization is wild"</span>
+   ↓  byte-pair encoding
+[<span class="st">"token"</span>, <span class="st">"ization"</span>, <span class="st">" is"</span>, <span class="st">" wild"</span>]
+   ↓  look up in the vocabulary
+[<span class="nm">8456</span>, <span class="nm">1634</span>, <span class="nm">318</span>, <span class="nm">4295</span>]   <span class="cm"># the model only ever sees these IDs</span></pre>
+    </div>
+    <p>Everything downstream operates on these IDs. (This is also why models have a <b>context length</b> — a hard cap on how many tokens fit at once, and why they sometimes miscount letters in a word: they never saw the letters.)</p>
+  </section>
+
+  <section id="embed">
+    <h2><span class="num">3</span> Embeddings + position</h2>
+    <div class="plain"><b>In plain words:</b> each token ID is looked up to get a vector (its meaning), and a position signal is added so the model knows the word order.</div>
+    <p>A token ID is just a number, so first it's turned into a vector — an <b>embedding</b> — via a lookup table the model learns (similar tokens end up with similar vectors). These are the tensors from explainer #2 that flow through everything.</p>
+    <p>But there's a catch from #6: attention is <b>order-blind</b>. It treats the input as a bag of tokens — "dog bites man" and "man bites dog" would look identical. So the model adds a <b>positional encoding</b> to each embedding: a signal that says "this is token 1, this is token 2…". Now position is baked into the vectors, and attention can use it.</p>
+  </section>
+
+  <section id="block">
+    <h2><span class="num">4</span> The transformer block</h2>
+    <div class="plain"><b>In plain words:</b> the repeating unit. Each block does two things — let tokens share context (attention), then think about it individually (a small network) — each wrapped in the residual + normalize tricks from #4.</div>
+    <p>This is the heart, and it's smaller than you'd expect. One block has two sub-layers:</p>
+    <ul class="ann">
+      <li><b>Masked self-attention</b> (explainer #6) — every token gathers context from the earlier tokens.</li>
+      <li><b>Feed-forward network</b> — a small two-layer MLP applied to each token on its own, to "process" what attention gathered. (Two matmuls, #3.)</li>
+    </ul>
+    <p>And each sub-layer is wrapped with the exact fixes from explainer #4, §8 — a <b>residual connection</b> (add the input back, giving gradients a shortcut) and <b>layer normalization</b> (keep the numbers well-scaled). Without these, you couldn't stack the block deep:</p>
+    <div class="tblock">
+      <div class="bl">Transformer block &nbsp;×N</div>
+      <div class="tadd">↳ layer-norm</div>
+      <div class="tbox att">masked self-attention &nbsp;(#6)</div>
+      <div class="tadd">+ residual (add input back)</div>
+      <div class="tadd">↳ layer-norm</div>
+      <div class="tbox ffn">feed-forward MLP &nbsp;(#3)</div>
+      <div class="tadd">+ residual (add input back)</div>
+    </div>
+    <p>That's it. Attention to mix tokens, an MLP to process them, residual + norm to keep training stable. A transformer is just this block, <b>stacked N times</b>, each copy refining the representation a little more.</p>
+  </section>
+
+  <section id="output">
+    <h2><span class="num">5</span> From the stack to a prediction</h2>
+    <div class="plain"><b>In plain words:</b> after the last block, the model turns each token's vector into a score for every possible next token, and softmax makes those scores into probabilities.</div>
+    <p>After the final block, you have a context-rich vector for each position. One more matmul projects the <em>last</em> token's vector to a <b>logit</b> for every token in the vocabulary — tens of thousands of raw scores, one per candidate next token. <b>Softmax</b> (the same one from #4 and #6) turns those into a probability distribution:</p>
+    <div class="codecard" style="max-width:520px">
+      <div class="head">The output head <span class="where">vector → next-token probabilities</span></div>
+<pre class="code">hidden  = blocks(embeddings)      <span class="cm"># [seq, d_model]</span>
+logits  = hidden[-1] @ W_out      <span class="cm"># [vocab]  one score per token</span>
+probs   = softmax(logits)         <span class="cm"># [vocab]  sums to 1</span></pre>
+    </div>
+    <p>So the model's entire output is a probability for <em>every</em> word that could come next. Now we just have to pick one — and repeat.</p>
+  </section>
+
+  <section id="generate">
+    <h2><span class="num">6</span> Generation: predicting one token at a time</h2>
+    <div class="plain"><b>In plain words:</b> pick a token from the probabilities, stick it on the end, and run the whole thing again. "Temperature" controls how adventurous the pick is.</div>
+    <p>This is <b>autoregressive</b> generation: predict → append → repeat. The causal mask from #6 is what makes it sound — each new token only ever attends to what came before it. The one choice is <em>how</em> to pick from the distribution: always take the top token (greedy), or <b>sample</b> from it. <b>Temperature</b> reshapes the distribution first — low temperature sharpens it (safe, repetitive), high temperature flattens it (creative, riskier); <b>top-k</b> keeps only the k likeliest candidates.</p>
+    <div class="stage">
+      <div class="genout" id="genOut"></div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px">
+        <button class="btn" id="genStep">Predict next token →</button>
+        <label style="font-size:.82rem">Temperature: <b id="tempVal" style="color:var(--accent)">0.8</b>
+          <input type="range" id="temp" min="0.2" max="1.6" step="0.1" value="0.8" style="vertical-align:middle;width:130px"></label>
+        <button class="btn alt" id="genReset" style="background:var(--panel2);color:var(--ink)">Reset</button>
+      </div>
+      <div class="gbars" id="genBars"></div>
+      <p class="muted" style="margin-top:8px;font-size:.78rem">Illustrative probabilities for one prompt — but this is exactly the loop a real model runs, thousands of tokens long.</p>
+    </div>
+  </section>
+
+  <section id="training">
+    <h2><span class="num">7</span> How an LLM is actually trained</h2>
+    <div class="plain"><b>In plain words:</b> first it reads the internet predicting the next token (pretraining), which teaches it language and facts. Then it's polished to follow instructions and be helpful (fine-tuning + RLHF).</div>
+    <p>The architecture above is trained in stages — all of it using the training loop from explainers #4–5 (forward, loss, backward, step), just at enormous scale:</p>
+    <ul class="ann">
+      <li><b>Pretraining</b> — next-token prediction over web-scale text. The loss is simply "did you predict the real next token?" Do this on trillions of tokens and the weights soak up grammar, facts, and reasoning patterns. This is where ~all the compute (and all those GPUs from #1–3) goes.</li>
+      <li><b>Supervised fine-tuning (SFT)</b> — keep training, now on curated instruction→response examples, so the raw text-predictor learns to behave like a helpful assistant.</li>
+      <li><b>RLHF</b> — humans rank responses; a reward model learns their preferences; the LLM is nudged to score higher. This alignment step is much of the difference between "autocomplete" and ChatGPT.</li>
+    </ul>
+    <div class="key"><b>The punchline:</b> the model is one next-token predictor the whole way through. Pretraining gives it knowledge; fine-tuning and RLHF aim that knowledge at being useful. Same architecture, same training loop — just scale and curation.</div>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>An LLM is a pipeline: text is split into <b>tokens</b> (BPE), each token becomes an <b>embedding</b> with a <b>positional</b> signal added, and those vectors flow through a stack of <b>N transformer blocks</b>. Each block is <b>masked self-attention</b> (#6) plus a <b>feed-forward MLP</b>, each wrapped in a <b>residual connection</b> and <b>layer norm</b> (the deep-net fixes from #4). After the last block, a final matmul makes <b>logits</b> over the vocabulary and <b>softmax</b> turns them into next-token probabilities. <b>Generation</b> samples one token (shaped by <b>temperature</b> / top-k), appends it, and repeats — autoregression, made safe by the causal mask. The thing is built by <b>pretraining</b> (next-token prediction at web scale) then <b>fine-tuning + RLHF</b> to make it a helpful assistant. It's matmuls, attention, and a training loop — everything from #1–6 — assembled.</p>
+    <div class="rcap-flow"><span class="n">text</span><span class="a">→</span><span class="n">tokens</span><span class="a">→</span><span class="n">embeddings + pos</span><span class="a">→</span><span class="n hl">block × N</span><span class="a">→</span><span class="n">logits</span><span class="a">→</span><span class="n go">next token</span></div>
+    <p class="muted" style="margin-top:14px">Next up: <b>#8 · What's Next</b> — scaling laws, mixture-of-experts, efficiency, long context, multimodal, and agents: where this all goes from here.</p>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Concepts here were checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Vaswani et al., "Attention Is All You Need"</a> &mdash; <span>the transformer block: attention + feed-forward, residual + layer-norm.</span></li>
+      <li><a href="https://github.com/karpathy/nanoGPT" target="_blank" rel="noopener">Andrej Karpathy &mdash; nanoGPT</a> &mdash; <span>a clean, minimal decoder-only GPT: embeddings, blocks, output head, generation.</span></li>
+      <li><a href="https://en.wikipedia.org/wiki/Generative_pre-trained_transformer" target="_blank" rel="noopener">Generative pre-trained transformer &mdash; Wikipedia</a> &mdash; <span>the GPT lineage, pretraining, and fine-tuning/RLHF.</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers worth your time:</b></p>
+    <ul class="refs">
+      <li><a href="https://bbycroft.net/llm" target="_blank" rel="noopener">Brendan Bycroft &mdash; LLM Visualization</a> <span>&mdash; an interactive 3-D walk through a real GPT, layer by layer.</span></li>
+      <li><a href="https://www.youtube.com/watch?v=kCc8FmEb1nY" target="_blank" rel="noopener">Karpathy, "Let's build GPT: from scratch, in code"</a> <span>&mdash; builds the whole thing live.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> &middot; part of the <b style="color:var(--ink)">Explainers</b> series.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- Generation stepper (illustrative) ---- */
+  var prompt = "The cat sat on the";
+  // each step: candidate tokens with base logits (illustrative); top one gets appended
+  var steps = [
+    [[" mat",3.2],[" floor",1.8],[" sofa",1.4],[" roof",0.9],[" bed",0.6]],
+    [[".",2.6],[" and",1.9],[" while",1.2],[" near",0.8],[" all",0.5]],
+    [[" The",2.2],[" It",1.7],[" A",1.3],[" Then",1.0],[" Soon",0.6]],
+    [[" sun",2.4],[" dog",1.6],[" room",1.5],[" rain",0.9],[" day",0.7]]
+  ];
+  var gi=0, text=prompt;
+  var genOut=document.getElementById('genOut'), genBars=document.getElementById('genBars'),
+      temp=document.getElementById('temp'), tempVal=document.getElementById('tempVal');
+  function softmaxT(logits, T){
+    var m=Math.max.apply(null, logits);
+    var ex=logits.map(function(l){return Math.exp((l-m)/T);});
+    var s=ex.reduce(function(a,b){return a+b;},0);
+    return ex.map(function(e){return e/s;});
+  }
+  function renderText(newTok){
+    genOut.innerHTML = text.replace(/</g,'&lt;') + (newTok? '<span class="new">'+newTok.replace(/</g,'&lt;')+'</span>' : '<span style="opacity:.4">▍</span>');
+  }
+  function showDist(){
+    if(gi>=steps.length){ genBars.innerHTML='<p class="muted" style="font-size:.82rem">End of demo — hit Reset to run it again.</p>'; return; }
+    var cands=steps[gi], T=+temp.value;
+    var probs=softmaxT(cands.map(function(c){return c[1];}), T);
+    var order=probs.map(function(p,i){return [p,i];}).sort(function(a,b){return b[0]-a[0];});
+    var html='';
+    order.forEach(function(o,rank){
+      var i=o[1], p=o[0];
+      html+='<div class="gbar-row'+(rank===0?' top':'')+'"><span class="name">'+cands[i][0].replace(/</g,'&lt;')+'</span>'+
+            '<span class="gbar-track"><span class="gbar" style="width:'+(p*100).toFixed(0)+'%"></span></span>'+
+            '<span class="pct">'+(p*100).toFixed(0)+'%</span></div>';
+    });
+    genBars.innerHTML=html;
+  }
+  function step(){
+    if(gi>=steps.length) return;
+    var cands=steps[gi], T=+temp.value;
+    var probs=softmaxT(cands.map(function(c){return c[1];}), T);
+    var best=0; for(var i=1;i<probs.length;i++) if(probs[i]>probs[best]) best=i;  // greedy on shaped probs
+    var tok=cands[best][0];
+    renderText(tok);
+    text+=tok; gi++;
+    setTimeout(function(){ renderText(null); showDist(); }, 450);
+  }
+  function reset(){ gi=0; text=prompt; renderText(null); showDist(); }
+  if(genOut){
+    temp.addEventListener('input',function(){tempVal.textContent=(+temp.value).toFixed(1);showDist();});
+    document.getElementById('genStep').addEventListener('click',step);
+    document.getElementById('genReset').addEventListener('click',reset);
+    reset();
+  }
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Transformer','A neural network built from a stack of identical blocks (attention + feed-forward, with residual + layer-norm). The architecture behind modern LLMs.'],
+    ['LLM','Large language model — a big transformer trained on web-scale text to predict the next token, then fine-tuned to be a helpful assistant.'],
+    ['Decoder-only / GPT','The transformer variant used by GPT: a single stack of masked-attention blocks that generates text left to right.'],
+    ['Token','A subword chunk of text (from BPE) — the unit the model actually reads, stored as an ID number.'],
+    ['BPE (byte-pair encoding)','The tokenizer that builds a vocabulary by merging frequent character pairs into subword pieces.'],
+    ['Embedding','The vector a token ID maps to (a learned lookup). Similar tokens get similar vectors. (Explainer #2.)'],
+    ['Positional encoding','A position signal added to each embedding so the order-blind attention knows word order.'],
+    ['Transformer block','The repeating unit: masked self-attention + a feed-forward MLP, each wrapped in a residual connection and layer-norm. Stacked N times.'],
+    ['Feed-forward network (FFN)','A small per-token two-layer MLP inside each block that processes what attention gathered. Two matmuls.'],
+    ['Residual + layer-norm','The fixes from #4 that make deep stacks trainable: add the input back (gradient shortcut) and keep activations well-scaled.'],
+    ['Logits','The raw per-token scores the model outputs before softmax — one for every word in the vocabulary.'],
+    ['Autoregressive generation','Predict the next token, append it, repeat. The causal mask (#6) keeps each token from seeing the future.'],
+    ['Temperature','A knob that reshapes the next-token probabilities before sampling: low = safe/repetitive, high = creative/risky.'],
+    ['Top-k sampling','Keep only the k most likely next tokens before sampling, discarding the long tail.'],
+    ['Pretraining','Unsupervised next-token prediction over web-scale text — where the model learns language and facts (and where the compute goes).'],
+    ['Fine-tuning / RLHF','Post-training: SFT on instruction→response pairs, then reinforcement learning from human feedback, to turn a text-predictor into a helpful assistant.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>

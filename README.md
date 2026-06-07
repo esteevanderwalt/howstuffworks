@@ -10,7 +10,7 @@ I come from a programming background and I'm learning in the open. Each **series
 
 | Series | About | Status |
 |--------|-------|--------|
-| [**From GPUs to the Frontier**](./content/gpu-to-frontier/) | 8 explainers taking you from low-level GPU hardware → tensors → PyTorch → transformers → what's next | 🟢 1 of 8 live |
+| [**From GPUs to the Frontier**](./content/gpu-to-frontier/) | 8 explainers taking you from low-level GPU hardware → tensors → PyTorch → transformers → what's next | ✅ Complete · 8 of 8 |
 | *(more to come)* | | |
 
 ## How it's organised

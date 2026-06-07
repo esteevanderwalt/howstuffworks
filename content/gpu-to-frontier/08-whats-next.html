@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What’s Next: the AI frontier — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #8 extras ---- */
+  .experts{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:10px;max-width:440px}
+  .expert{aspect-ratio:1;border-radius:8px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.66rem;color:var(--muted);transition:background .15s,border-color .15s}
+  .expert.on{background:rgba(63,185,80,.32);border-color:var(--green);color:var(--green);font-weight:700}
+  .moe-stat{font-size:.92rem;margin-top:12px}
+  .moe-stat b{color:var(--green)}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #8 · Finale</div>
+    <h1>What's next: the frontier</h1>
+    <p class="sub">You now understand the whole machine — from a loop on a GPU to a working LLM. The frontier isn't a different machine; it's pushing harder on the exact parts you've just learned. Here's where it's going, as of mid-2026.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#scaling">1 · Scaling &amp; reasoning</a>
+      <a href="#moe">2 · Mixture-of-Experts</a>
+      <a href="#efficiency">3 · Efficiency</a>
+      <a href="#multimodal">4 · Multimodal &amp; agents</a>
+      <a href="#open">5 · Open questions</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">Researched fresh against current sources (mid-2026) — the field moves monthly, so treat specifics as a snapshot. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: the frontier is the same machine, pushed harder</h2>
+    <div class="plain"><b>In plain words:</b> nothing on the frontier replaces what you've learned. Every cutting-edge idea is a twist on the matmul, attention, and training loop from explainers #1–7.</div>
+    <p>That's the payoff of reading the whole series: you can now read the headlines. "Reasoning models," "mixture-of-experts," "fp8 quantization," "agents" — each is a knob on the machine you already understand. We'll tour four directions, and for each, name exactly which part of #1–7 it turns.</p>
+    <div class="key"><b>One honest caveat:</b> this is the fastest-moving corner of tech. The <em>directions</em> below are durable; the specific models and numbers are a mid-2026 snapshot and will date quickly. The mental model won't.</div>
+  </section>
+
+  <section id="scaling">
+    <h2><span class="num">1</span> Scaling — and now, reasoning</h2>
+    <div class="plain"><b>In plain words:</b> for years, "make it better" meant "make it bigger." The newest twist is making it <em>think longer at answer time</em> instead of only training it bigger.</div>
+    <p>The last era ran on <b>scaling laws</b>: add parameters, data, and compute together and the loss drops <em>predictably</em>. That's why models — and the GPU clusters from #1 — ballooned. It hasn't stopped, but it's getting expensive, and a second axis opened up:</p>
+    <p><b>Inference-time compute</b> (a.k.a. reasoning, or "test-time scaling"). Instead of only training a bigger model, you let the model <b>think longer when answering</b> — generating a long chain-of-thought before its final reply. OpenAI's o-series showed this works: o3 reportedly averaged <b>~57 million tokens of thinking per hard question</b>. More thinking, better answers — a knob you turn at <em>answer time</em>, not training time.</p>
+    <div class="key"><b>Tie back to the series:</b> both axes are just <b>more matmul on more GPUs</b> (#1–3) — one spends it during training, the other during generation (#7's loop, run much longer). Analysts now expect <em>inference</em> compute to dwarf training, which is reshaping the whole hardware story from explainer #1.</div>
+  </section>
+
+  <section id="moe">
+    <h2><span class="num">2</span> Mixture-of-Experts: huge, but cheap to run</h2>
+    <div class="plain"><b>In plain words:</b> instead of one giant network where every weight runs for every token, split it into many "expert" sub-networks and fire only a couple per token. Enormous total size, small cost per token.</div>
+    <p>Recall the feed-forward sub-layer inside each transformer block (#7, §4). In a <b>Mixture-of-Experts (MoE)</b> model, that one network is replaced by <em>many</em> — say 256 experts — plus a tiny <b>router</b> that picks the best couple for each token. The rest stay dark. So the model holds vast knowledge in its total parameters while doing only a sliver of the work per token.</p>
+    <p>That's why MoE model cards list <em>two</em> numbers. DeepSeek-V3, the canonical example, is <b>671B total parameters but only ~37B active per token</b> — about 1/18th firing at a time. Click to route a token and watch which experts light up:</p>
+    <div class="stage">
+      <div class="toggle">
+        <button id="moeMode" class="on">MoE (sparse)</button>
+        <button id="denseMode">Dense (all fire)</button>
+      </div>
+      <button class="btn" id="moeRoute" style="margin-left:8px">Route a token →</button>
+      <div class="experts" id="experts"></div>
+      <div class="moe-stat" id="moeStat"></div>
+    </div>
+    <p class="muted">It's the same matmuls from #3 — just applied <em>sparsely</em>. MoE is how much of the 2025–26 open-weight frontier (DeepSeek, Qwen, GLM, Llama 4 and others) got enormous without a proportional jump in compute.</p>
+  </section>
+
+  <section id="efficiency">
+    <h2><span class="num">3</span> Efficiency: making it cheap enough to run anywhere</h2>
+    <div class="plain"><b>In plain words:</b> the other race isn't bigger — it's smaller and cheaper. Shrink the numbers (quantization), train small models to copy big ones (distillation), and you can run yesterday's frontier on a laptop or phone.</div>
+    <p>This direction is explainer #2's dtypes turned into a strategy:</p>
+    <div class="dirgrid">
+      <div class="dircard"><b>Quantization</b>Store and compute weights in fewer bits — <b>fp8, int4</b> instead of fp16/32 (#2, §4). Far less memory and bandwidth, so the matmuls (#3) run faster and fit on smaller hardware, with surprisingly little quality loss.</div>
+      <div class="dircard"><b>Distillation</b>Train a small "student" model to mimic a big "teacher." You bottle much of the capability into a fraction of the parameters.</div>
+      <div class="dircard"><b>On-device</b>The payoff: capable models (Gemma, Nemotron Nano, and others) now run locally on phones and laptops — private, offline, instant.</div>
+    </div>
+    <div class="key"><b>Tie back:</b> this is the same precision/throughput lever as the tensor cores and TPUs from explainer #1 (§10–11) and the dtypes from #2 — now pointed at <em>deployment</em>. "GPT-4-level on a laptop" is mostly an efficiency story, not a new architecture.</div>
+  </section>
+
+  <section id="multimodal">
+    <h2><span class="num">4</span> Multimodal &amp; agents: beyond a single text turn</h2>
+    <div class="plain"><b>In plain words:</b> the model stops being text-only and stops being a one-shot answerer. It can see, hear, and watch — and it can take actions in a loop.</div>
+    <p>Two shifts, both built on the transformer you already know:</p>
+    <ul class="ann">
+      <li><b>Multimodal</b> — images, audio, and video are chopped into <b>tokens</b> too, then fed into the <em>same</em> stream as text (#7). One model reasons across all of it at once. Context windows have stretched to <b>millions of tokens</b>, enough for whole books, codebases, or hour-long videos.</li>
+      <li><b>Agents</b> — wrap the model in a loop where it can <b>call tools</b>, browse, run code, or operate a computer, observe the result, and decide the next step. The model is still predicting next tokens (#7) — but some of those tokens are <em>actions</em>, not just words. 2026 is widely called the year agents went mainstream.</li>
+    </ul>
+    <div class="key"><b>Tie back:</b> none of this is a new core. A picture becomes tokens; an action is a token the surrounding program executes. It's the same next-token engine from #7, given more kinds of input and a loop that lets it <em>act</em>.</div>
+  </section>
+
+  <section id="open">
+    <h2><span class="num">5</span> Open questions</h2>
+    <div class="plain"><b>In plain words:</b> a lot is genuinely undecided. Here are the big honest uncertainties — held lightly, since reasonable people disagree.</div>
+    <p>A grounded finale should admit what nobody knows yet:</p>
+    <ul class="ann">
+      <li><b>How far does scaling go?</b> Each axis (bigger, longer training, more thinking) still helps — but data, money, and energy are real limits. Whether this curve bends toward something like general intelligence or plateaus is openly debated.</li>
+      <li><b>Cost and energy.</b> If inference compute dwarfs training, the bottleneck becomes power and chips — an economics and infrastructure problem as much as a research one.</li>
+      <li><b>Reliability.</b> These models still confidently make things up, and "reasoning" doesn't fully fix it. Trusting them for high-stakes work is unsolved.</li>
+      <li><b>Where the value (and risk) lands.</b> Capability, safety, jobs, concentration of power — the societal questions are at least as live as the technical ones, and worth following with the same curiosity you brought here.</li>
+    </ul>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole series, in one breath</h2>
+    <p>You started with a <code>for</code> loop and a question — why are GPUs fast? Eight explainers later: a <b>GPU</b> runs thousands of threads of <b>matmul</b> (#1, #3) over <b>tensors</b> (#2); <b>gradients and a training loop</b> teach the weights (#4); <b>PyTorch</b> wires it all to the hardware (#5); <b>attention</b> lets tokens share context (#6); a stack of those becomes a <b>transformer / LLM</b> (#7); and the <b>frontier</b> — reasoning, MoE, efficiency, agents — is all of that, pushed harder (#8). It's matmul, attention, and a training loop, scaled. That's the machine.</p>
+    <div class="rcap-flow"><span class="n">GPUs</span><span class="a">→</span><span class="n">Tensors</span><span class="a">→</span><span class="n">Matmul</span><span class="a">→</span><span class="n">Learning</span><span class="a">→</span><span class="n">PyTorch</span><span class="a">→</span><span class="n">Attention</span><span class="a">→</span><span class="n">Transformers</span><span class="a">→</span><span class="n go">Frontier</span></div>
+
+    <p>You can now read almost any AI headline or paper and place it on this map. That was the whole point.</p>
+    <p class="muted" style="margin-top:14px">Thanks for reading the series. The best next step isn't another explainer — it's to <b>build something</b>: train a tiny model, run a local LLM, read one of the linked papers end to end. You have the map; go explore.</p>
+  </section>
+
+  <style>
+    .dirgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:8px}
+    .dircard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:.84rem;color:var(--muted)}
+    .dircard b{display:block;margin-bottom:3px;color:var(--ink)}
+  </style>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Specifics here were checked against these (mid-2026):</p>
+    <ul class="refs">
+      <li><a href="https://arxiv.org/abs/2001.08361" target="_blank" rel="noopener">Kaplan et al., "Scaling Laws for Neural Language Models"</a> &mdash; <span>the predictable bigger-is-better curve behind the scaling era.</span></li>
+      <li><a href="https://arxiv.org/abs/2408.03314" target="_blank" rel="noopener">Snell et al., "Scaling LLM Test-Time Compute Optimally"</a> &mdash; <span>the inference-time / "think longer" axis.</span></li>
+      <li><a href="https://arxiv.org/abs/2412.19437" target="_blank" rel="noopener">DeepSeek-V3 Technical Report</a> &mdash; <span>the canonical MoE numbers: 671B total / 37B active per token.</span></li>
+      <li><a href="https://openai.com/index/learning-to-reason-with-llms/" target="_blank" rel="noopener">OpenAI, "Learning to reason with LLMs" (o1)</a> &mdash; <span>chain-of-thought reasoning models.</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers worth your time:</b></p>
+    <ul class="refs">
+      <li><a href="https://huggingface.co/blog/moe" target="_blank" rel="noopener">Hugging Face, "Mixture of Experts Explained"</a> <span>&mdash; routers, experts, and active-vs-total parameters.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Researched, written and visualized by <b style="color:var(--ink)">Estee</b> &middot; the finale of the <b style="color:var(--ink)">From GPUs to the Frontier</b> series. Thanks for reading.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- MoE router ---- */
+  var N=16, mode='moe';
+  var grid=document.getElementById('experts'), stat=document.getElementById('moeStat');
+  if(grid){
+    for(var i=0;i<N;i++){var d=document.createElement('div');d.className='expert';d.id='ex'+i;d.textContent='E'+(i+1);grid.appendChild(d);}
+  }
+  function clearEx(){ for(var i=0;i<N;i++) document.getElementById('ex'+i).classList.remove('on'); }
+  function setStat(active, total, params){
+    stat.innerHTML='Active this token: <b>'+active+' / '+total+' experts</b> &nbsp;·&nbsp; '+params;
+  }
+  function route(){
+    clearEx();
+    if(mode==='dense'){
+      for(var i=0;i<N;i++) document.getElementById('ex'+i).classList.add('on');
+      setStat(N, N, 'all 671B parameters run — every token, every time');
+    } else {
+      var picks={}; while(Object.keys(picks).length<2){ picks[Math.floor(Math.random()*N)]=1; }
+      Object.keys(picks).forEach(function(k){ document.getElementById('ex'+k).classList.add('on'); });
+      setStat(2, N, '~37B of 671B parameters (about 1/18) — the rest stay dark');
+    }
+  }
+  var moeBtn=document.getElementById('moeMode'), denseBtn=document.getElementById('denseMode');
+  if(grid){
+    moeBtn.addEventListener('click',function(){mode='moe';moeBtn.classList.add('on');denseBtn.classList.remove('on');route();});
+    denseBtn.addEventListener('click',function(){mode='dense';denseBtn.classList.add('on');moeBtn.classList.remove('on');route();});
+    document.getElementById('moeRoute').addEventListener('click',route);
+    route();
+  }
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Scaling laws','The empirical finding that loss drops predictably as you add parameters, data, and compute together — the engine of the last era of LLMs.'],
+    ['Inference-time compute','Spending more compute when answering (not just when training) — letting the model "think longer" before replying. Also called test-time scaling.'],
+    ['Reasoning model','A model trained to produce a long chain-of-thought before its final answer, trading speed for accuracy on hard problems (e.g. OpenAI o-series).'],
+    ['Chain-of-thought','Intermediate reasoning steps the model generates before answering — more thinking tokens, better answers on hard tasks.'],
+    ['Mixture-of-Experts (MoE)','A model whose feed-forward layer is split into many expert sub-networks; a router fires only a few per token. Huge total size, small cost per token.'],
+    ['Router','The small network in an MoE that picks which experts handle each token.'],
+    ['Active vs total parameters','MoE models quote both: total = all weights stored; active = the fraction that actually runs per token (e.g. DeepSeek-V3: 671B total, 37B active).'],
+    ['Quantization','Storing/computing weights in fewer bits (fp8, int4) — less memory and faster matmuls, with little quality loss. Explainer #2\'s dtypes as a strategy.'],
+    ['Distillation','Training a small "student" model to mimic a big "teacher," packing much of the capability into far fewer parameters.'],
+    ['Multimodal','One model that handles images, audio, and video alongside text — each chopped into tokens and fed into the same transformer.'],
+    ['Context window','How many tokens the model can attend to at once. Frontier models reach into the millions — whole books or codebases.'],
+    ['Agent','A model wrapped in a loop where it can call tools, browse, or run code — some of its output tokens are actions the surrounding program executes.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>

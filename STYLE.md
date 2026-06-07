@@ -26,7 +26,7 @@ The reader is a working programmer, not a beginner and not a specialist. They kn
 Hero            title · one-line promise · TOC chips · source line
 ▶ Start here    familiar ground → the leap → the one question
 1..N Sections   each: In-plain-words → prose/diagram/interactive → analogy/key callout
-✓ Recap         the whole picture in one paragraph + key-term pills + hand-off to next
+✓ Recap         the whole picture in one paragraph + a visual arc (.rcap-flow) + hand-off to the next explainer
 Credit footer   source attribution + what's adapted vs added + your byline
 📖 Glossary      every bolded term, searchable, reachable from anywhere
 ```
@@ -41,7 +41,7 @@ Credit footer   source attribution + what's adapted vs added + your byline
 | `.codecard` + `pre.code` | Annotated code snippets with light syntax highlighting |
 | `.stage` + `.toggle` | A two-state interactive demo (good case vs costly case) |
 | `.vs` | A side-by-side comparison table (e.g. CPU vs GPU) |
-| `.pill` | Quick-reference chips in the recap |
+| `.rcap-flow` | The recap's visual arc — the explainer's key steps as connected nodes (`.hl` = pivotal, `.go` = payoff) |
 | Glossary drawer | Edit only the `glossary` array in the script; the mechanics are shared |
 
 ## Writing checklist
@@ -54,6 +54,7 @@ Credit footer   source attribution + what's adapted vs added + your byline
 - [ ] At least one interactive that teaches, not decorates.
 - [ ] Numbers and claims are checked against the source.
 - [ ] Source is credited in hero + footer, with what's adapted vs added.
+- [ ] Reference links resolve and are current (vendor docs — NVIDIA, PyTorch, Google — restructure every year or two; re-check the back-catalogue's links at each launch, not just the new one's).
 - [ ] Recap hands off to the next explainer.
 - [ ] File saved as `content/<series>/NN-kebab-title.html`; row added to the series README table.
 

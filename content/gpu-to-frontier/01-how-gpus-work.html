@@ -202,6 +202,12 @@
   /* TPU = one connected array: no gaps, faint internal lattice, single border */
   .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
   .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
 </style>
 </head>
 <body>
@@ -641,15 +647,7 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
   <section id="recap" style="border-color:var(--accent)">
     <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
     <p>A GPU is a <b>factory of SMs</b> (workshops), each packed with cores. You write a <b>kernel</b> — the instructions for one worker — and launch a <b>grid</b> of threads with <code>&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code>. Each thread computes its own <b>global index</b> (<code>blockIdx·blockDim + threadIdx</code>) to find the data it owns. Threads are grouped into <b>blocks</b> assigned to single SMs, then run 32-at-a-time as <b>warps</b>, all executing the same instruction on different data (<b>SIMT</b>). Memory is layered from instant <b>registers</b> up to a huge-but-distant <b>global memory</b>, and the GPU hides that distance by instantly swapping to another ready warp whenever one waits — for free, because every thread keeps its own registers. How full you keep each SM with warps is <b>occupancy</b>, and balancing it against register and memory limits is most of GPU performance work.</p>
-    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px">
-      <span class="pill">CPU = latency</span><span class="pill">GPU = throughput</span><span class="pill">SM = workshop</span>
-      <span class="pill">grid → block → warp → thread</span><span class="pill">kernel = one thread's job</span>
-      <span class="pill">i = blockIdx·blockDim + threadIdx</span><span class="pill">warp = 32 threads</span>
-      <span class="pill">free warp swaps hide latency</span><span class="pill">occupancy = SM fullness</span>
-      <span class="pill">split if/else = divergence (slow)</span><span class="pill">neighbour threads → neighbour memory</span>
-      <span class="pill">AI = piles of independent matrix math</span>
-      <span class="pill">TPUs/ASICs specialize further for matmul</span>
-    </div>
+    <div class="rcap-flow"><span class="n">independent loop</span><span class="a">→</span><span class="n">1 thread / item</span><span class="a">→</span><span class="n">block</span><span class="a">→</span><span class="n hl">warp = 32</span><span class="a">→</span><span class="n">SM</span><span class="a">→</span><span class="n go">high throughput</span></div>
   </section>
 
   <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">

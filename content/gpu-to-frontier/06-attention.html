@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attention: the idea that changed everything — A Visual Explainer</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2a3340; --accent:#58a6ff; --green:#3fb950; --amber:#d29922; --purple:#bc8cff;
+    --cpu:#f78166; --gpu:#3fb950;
+    --radius:14px; --maxw:920px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:32px 20px 80px}
+  header.hero{padding:24px 0 8px}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:.72rem}
+  h1{font-size:2rem; line-height:1.2; margin:.3em 0 .2em}
+  .sub{color:var(--muted); font-size:1.05rem; max-width:640px}
+  .src{color:var(--muted); font-size:.8rem; margin-top:14px}
+  .src a{color:var(--accent); text-decoration:none}
+  section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px 22px; margin:22px 0}
+  h2{font-size:1.35rem; margin:.1em 0 .5em; display:flex; align-items:center; gap:10px}
+  h2 .num{background:var(--accent); color:#04101f; width:30px;height:30px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:800;flex:none}
+  h3{font-size:1.02rem; margin:1.2em 0 .3em; color:var(--ink)}
+  p{margin:.5em 0}
+  .muted{color:var(--muted)}
+  .analogy{border-left:3px solid var(--purple); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .analogy b{color:var(--purple)}
+  .key{border-left:3px solid var(--amber); background:var(--panel2); padding:12px 16px; border-radius:0 10px 10px 0; margin:14px 0}
+  .key b{color:var(--amber)}
+  code{background:#0b1622; border:1px solid var(--line); padding:1px 6px; border-radius:6px; font-size:.88em; color:#cfe3ff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr}}
+  /* CPU vs GPU chip viz */
+  .chip{border:1px solid var(--line); border-radius:12px; padding:12px; background:#0b1019}
+  .chip h4{margin:0 0 4px; font-size:.95rem}
+  .chip .tag{font-size:.72rem; color:var(--muted)}
+  .cells{display:grid; gap:3px; margin-top:10px}
+  .cpu-cells{grid-template-columns:repeat(4,1fr)}
+  .gpu-cells{grid-template-columns:repeat(12,1fr)}
+  .cell{aspect-ratio:1; border-radius:3px}
+  .alu{background:var(--gpu)}
+  .alu-cpu{background:var(--cpu)}
+  .ctrl{background:#30363d}
+  .cache{background:#1f6feb55; border:1px solid #1f6feb}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; font-size:.78rem; color:var(--muted); margin-top:12px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  /* memory hierarchy */
+  .mem-row{display:flex; align-items:center; gap:14px; margin:8px 0; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:#0b1019; cursor:default; transition:transform .12s, border-color .12s}
+  .mem-row:hover{transform:translateX(4px); border-color:var(--accent)}
+  .mem-bar{height:14px; border-radius:7px; flex:none}
+  .mem-meta{flex:1}
+  .mem-meta b{display:block}
+  .mem-meta span{font-size:.82rem; color:var(--muted)}
+  .speed{font-size:.74rem; color:var(--muted); white-space:nowrap; text-align:right}
+  /* hierarchy grid/block/warp */
+  .hier{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; margin-top:8px}
+  .gridbox{border:2px dashed var(--accent); border-radius:12px; padding:12px}
+  .gridbox > .lbl{color:var(--accent)}
+  .blocks{display:grid; grid-template-columns:repeat(2,auto); gap:10px; margin-top:8px}
+  .block{border:2px solid var(--green); border-radius:10px; padding:8px}
+  .block > .lbl{color:var(--green)}
+  .threads{display:grid; grid-template-columns:repeat(8,1fr); gap:2px; margin-top:6px}
+  .thread{width:9px;height:9px;border-radius:2px;background:var(--purple)}
+  .lbl{font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:block; margin-bottom:2px}
+  /* warp animation */
+  .warp-stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:8px}
+  .warp{display:flex; gap:3px; margin:7px 0; align-items:center}
+  .warp .wlbl{width:64px; font-size:.78rem; color:var(--muted); flex:none}
+  .lane{width:14px;height:14px;border-radius:3px; background:#30363d; transition:background .2s}
+  .lane.run{background:var(--green)}
+  .lane.wait{background:var(--amber)}
+  .btn{background:var(--accent); color:#04101f; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; font-size:.9rem; margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:.82rem; color:var(--muted); margin-top:10px; min-height:1.4em}
+  /* occupancy */
+  .occ-controls{display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:6px}
+  .occ-controls label{font-size:.85rem; display:flex; flex-direction:column; gap:4px}
+  .occ-controls input{width:180px}
+  .occ-bar-outer{height:26px; background:#0b1019; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:14px}
+  .occ-bar-inner{height:100%; background:linear-gradient(90deg,var(--amber),var(--green)); width:0%; transition:width .25s; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; font-weight:800; color:#04101f; font-size:.85rem}
+  .occ-note{font-size:.84rem; color:var(--muted); margin-top:10px}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-size:.78rem; margin:2px}
+  .tl{color:var(--cpu); font-weight:700}
+  .tg{color:var(--gpu); font-weight:700}
+  footer{color:var(--muted); font-size:.82rem; text-align:center; margin-top:30px}
+  .toc{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 4px}
+  .toc a{font-size:.82rem; color:var(--accent); text-decoration:none; border:1px solid var(--line); padding:5px 11px; border-radius:999px; background:var(--panel)}
+  .toc a:hover{border-color:var(--accent)}
+  /* code blocks */
+  .codewrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px}
+  @media(max-width:760px){.codewrap{grid-template-columns:1fr}}
+  .codecard{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#0b1019}
+  .codecard .head{background:#11161f; padding:8px 14px; font-size:.8rem; font-weight:700; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .codecard .head .where{font-weight:500; font-size:.72rem; color:var(--muted)}
+  pre.code{margin:0; padding:14px 16px; overflow-x:auto; font-family:"SF Mono",Menlo,Consolas,monospace; font-size:.8rem; line-height:1.55}
+  pre.code .cm{color:#7d8da1; font-style:italic}
+  pre.code .kw{color:#bc8cff}
+  pre.code .fn{color:#58a6ff}
+  pre.code .bi{color:#3fb950}
+  pre.code .nm{color:#d29922}
+  pre.code .ty{color:#79c0ff}
+  .ann{font-size:.84rem; color:var(--muted); margin:10px 0 0; padding-left:0; list-style:none}
+  .ann li{margin:7px 0; padding-left:20px; position:relative}
+  .ann li:before{content:"▸"; position:absolute; left:0; color:var(--accent)}
+  .ann code{font-size:.82em}
+  /* index visualizer */
+  .ixv{background:#0b1019; border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:10px}
+  .ixv-controls{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+  .ixv-controls .grp{display:flex; flex-direction:column; gap:6px}
+  .ixv-controls .lab{font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700}
+  .stepper{display:flex; align-items:center; gap:8px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:1.1rem;cursor:pointer}
+  .stepper button:hover{border-color:var(--accent)}
+  .stepper .v{min-width:30px; text-align:center; font-weight:800; font-size:1.1rem}
+  .formula{font-family:"SF Mono",Menlo,monospace; font-size:1rem; margin:18px 0 12px; padding:12px 14px; background:#11161f; border-radius:10px; border:1px solid var(--line); overflow-x:auto}
+  .formula .b{color:var(--green)} .formula .t{color:var(--purple)} .formula .d{color:var(--accent)} .formula .r{color:var(--amber); font-weight:800}
+  .arr{display:grid; grid-template-columns:repeat(16,1fr); gap:3px; margin-top:6px}
+  .acell{aspect-ratio:1; border-radius:4px; background:#1c2330; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .acell.hot{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber); transform:scale(1.12)}
+  .acell.blk{box-shadow:inset 0 -3px 0 var(--green)}
+  .arrlabel{font-size:.72rem; color:var(--muted); margin-top:8px}
+  /* plain-words callout */
+  .plain{background:rgba(63,185,80,.07); border:1px solid rgba(63,185,80,.35); border-radius:10px; padding:9px 14px; margin:0 0 16px; font-size:.95rem}
+  .plain b{color:var(--green); font-weight:700}
+  /* divergence */
+  .stage{background:#0b1019; border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:10px}
+  .drow{display:flex; align-items:center; gap:10px; margin:8px 0}
+  .drow .rl{width:150px; font-size:.78rem; color:var(--muted); flex:none}
+  .dlanes{display:flex; gap:3px; flex-wrap:wrap}
+  .dl{width:15px; height:15px; border-radius:3px; background:#30363d}
+  .dl.a{background:var(--accent)} .dl.b{background:var(--purple)} .dl.idle{background:#1a2230; opacity:.45}
+  .cost{font-size:.84rem; font-weight:700; margin-top:12px}
+  .cost.fast{color:var(--green)} .cost.slow{color:var(--amber)}
+  .toggle{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:4px}
+  .toggle button{background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; cursor:pointer; font-size:.85rem; font-weight:600}
+  .toggle button.on{background:var(--accent); color:#04101f}
+  /* coalescing */
+  .twrap{display:flex; gap:3px; margin:4px 0 2px}
+  .tnode{flex:1; text-align:center; font-size:.6rem; color:var(--muted); background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:3px 0}
+  .mgrid{display:grid; grid-template-columns:repeat(32,1fr); gap:2px; margin-top:10px}
+  .mc{aspect-ratio:1; border-radius:2px; background:#161d29}
+  .mc.s0{box-shadow:inset 0 0 0 1px rgba(88,166,255,.4)} .mc.s1{box-shadow:inset 0 0 0 1px rgba(63,185,80,.4)}
+  .mc.s2{box-shadow:inset 0 0 0 1px rgba(188,140,255,.4)} .mc.s3{box-shadow:inset 0 0 0 1px rgba(210,153,34,.4)}
+  .mc.hit{background:var(--amber)}
+  .seglabel{display:grid; grid-template-columns:repeat(4,1fr); gap:2px; font-size:.62rem; color:var(--muted); margin-top:4px; text-align:center}
+  /* matmul */
+  .mm{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center}
+  .mat{display:inline-grid; gap:3px}
+  .mat .cap{grid-column:1/-1; font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:2px}
+  .mcellm{width:30px; height:30px; border-radius:4px; background:var(--panel2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:.62rem; color:var(--muted)}
+  .mat.cmat .mcellm{cursor:pointer}
+  .mcellm.rowhi{background:rgba(88,166,255,.35); border-color:var(--accent)}
+  .mcellm.colhi{background:rgba(188,140,255,.35); border-color:var(--purple)}
+  .mcellm.sel{background:var(--amber); color:#04101f; font-weight:800; border-color:var(--amber)}
+  .mmop{font-size:1.4rem; color:var(--muted)}
+  /* glossary drawer */
+  #glossBtn{position:fixed; right:18px; bottom:18px; z-index:50; background:var(--accent); color:#04101f; border:none; border-radius:999px; padding:11px 18px; font-weight:800; font-size:.9rem; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  #glossBtn:hover{filter:brightness(1.08)}
+  #glossOverlay{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s}
+  #glossOverlay.open{opacity:1; pointer-events:auto}
+  #glossPanel{position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); background:var(--panel); border-left:1px solid var(--line); z-index:70; transform:translateX(100%); transition:transform .25s; overflow-y:auto; padding:22px 22px 60px}
+  #glossPanel.open{transform:translateX(0)}
+  #glossPanel h3{margin:0; font-size:1.2rem}
+  #glossPanel .ghint{font-size:.8rem; color:var(--muted); margin:4px 0 0}
+  #glossPanel .gclose{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1}
+  .gsearch{width:100%; padding:9px 12px; margin:14px 0 8px; background:#0b1019; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:.9rem}
+  .gsearch:focus{outline:none; border-color:var(--accent)}
+  .gterm{padding:11px 0; border-bottom:1px solid var(--line)}
+  .gterm b{color:var(--accent); display:block; font-size:.92rem; margin-bottom:2px}
+  .gterm span{font-size:.84rem; color:var(--muted)}
+  .gterm.hide{display:none}
+  /* vs table */
+  .vs{width:100%; border-collapse:collapse; margin:10px 0 4px; font-size:.86rem}
+  .vs th, .vs td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  .vs th{font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  .vs td:first-child, .vs th:first-child{color:var(--muted); width:30%}
+  .vs .cpu{color:var(--cpu); font-weight:700} .vs .gpu{color:var(--gpu); font-weight:700}
+  /* references */
+  footer a{color:var(--accent); text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  footer h3{color:var(--ink); font-size:1.15rem; margin:0 0 4px}
+  .refs{margin:6px 0 16px; padding-left:20px}
+  .refs li{margin:7px 0}
+  .refs li span{color:var(--muted)}
+  /* three-up chip diagram */
+  .chips3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:10px}
+  @media(max-width:620px){.chips3{grid-template-columns:1fr}}
+  .minichip{border:1px solid var(--line); border-radius:10px; padding:12px; background:#0b1019; text-align:center}
+  .minichip h4{margin:0 0 2px; font-size:.95rem}
+  .mc-cells{display:grid; gap:2px; margin:8px 0}
+  .minichip .cap{font-size:.76rem; color:var(--muted)}
+  .cell.mac{background:var(--purple)}
+  /* TPU = one connected array: no gaps, faint internal lattice, single border */
+  .mc-cells.solidgrid{gap:0; border:1.5px solid var(--purple); border-radius:6px; overflow:hidden}
+  .mc-cells.solidgrid .cell{border-radius:0; box-shadow:inset 0 0 0 .5px rgba(13,17,23,.55)}
+
+  /* ---- #6 extras ---- */
+  .attn-sent{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .attn-tok{padding:6px 9px 4px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:.92rem;min-width:34px;text-align:center;transition:border-color .12s}
+  .attn-tok:hover{border-color:var(--accent)}
+  .attn-tok.q{outline:2px solid var(--accent);outline-offset:1px}
+  .attn-bar{height:4px;border-radius:2px;background:var(--green);margin-top:5px;width:0}
+  .attn-out{font-size:.88rem;margin-top:12px}
+  .attn-out b{color:var(--green)}
+  .qkv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+  @media(max-width:620px){.qkv{grid-template-columns:1fr}}
+  .qkv .box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .qkv .box b{display:block;margin-bottom:3px}
+  .qkv .q b{color:var(--accent)} .qkv .k b{color:var(--amber)} .qkv .v b{color:var(--green)}
+  /* recap arc */
+  .rcap-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 2px}
+  .rcap-flow .n{border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:#0b1019;font-size:.76rem;white-space:nowrap}
+  .rcap-flow .a{color:var(--muted);font-size:.8rem}
+  .rcap-flow .n.hl{border-color:var(--accent);color:var(--accent)}
+  .rcap-flow .n.go{border-color:var(--green);color:var(--green);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Visual Explainer · Series #6</div>
+    <h1>Attention: the idea that changed everything</h1>
+    <p class="sub">One mechanism lets every word in a sentence look at every other word and pull in what it needs. It replaced a decade of sequential models — and it's mostly the matmuls you already know.</p>
+    <div class="toc">
+      <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
+      <a href="#problem">1 · The problem</a>
+      <a href="#qkv">2 · Query, Key, Value</a>
+      <a href="#mechanism">3 · The mechanism</a>
+      <a href="#matmul">4 · It's matmuls</a>
+      <a href="#scale">5 · Why ÷√d</a>
+      <a href="#multihead">6 · Multi-head</a>
+      <a href="#mask">7 · Causal masking</a>
+      <a href="#" id="glossTocLink" style="border-color:var(--green);color:var(--green)">📖 Glossary</a>
+    </div>
+    <p class="src">A synthesis from Vaswani et al.'s "Attention Is All You Need" and Jay Alammar's "Illustrated Transformer" — verified against primary sources. <a href="#refs">Full references below.</a></p>
+  </header>
+
+  <section id="start" style="border-color:var(--purple)">
+    <h2><span class="num" style="background:var(--purple)">▶</span> Start here: what does "it" refer to?</h2>
+    <div class="plain"><b>In plain words:</b> a word's meaning depends on the other words around it. Attention is how a model lets each word look at all the others and pull in the context it needs — all at once.</div>
+    <p>Read this sentence: <em>"The animal didn't cross the street because <b>it</b> was too tired."</em> To handle <b>it</b>, a model has to connect it back to <b>animal</b>. Every word needs to gather context from the others.</p>
+    <p>Older models (RNNs) read left-to-right, one word at a time, squeezing everything seen so far into a single running summary — and they tended to <em>forget</em> distant words. Attention throws that out with a bold move:</p>
+    <p style="text-align:center;font-size:1.06rem;color:var(--accent);font-weight:700;margin:16px 0">Let every token look at every other token directly — in parallel — and decide how much to pull from each.</p>
+    <div class="key"><b>The whole explainer in one line:</b> each token asks a question, every token answers, and the answers get blended by how well they match. That matching-and-blending is attention — and it's built from the matmuls of #3 and the softmax from #4.</div>
+  </section>
+
+  <section id="problem">
+    <h2><span class="num">1</span> The problem: words need each other</h2>
+    <div class="plain"><b>In plain words:</b> the meaning of a token isn't fixed — it shifts based on the rest of the sequence. The model needs a way to mix information between tokens.</div>
+    <p>"Bank" means different things in "river bank" and "bank account." The only way to tell is to look at neighbouring words. So a language model needs a step that lets each token's representation be <b>updated by the others</b>.</p>
+    <p>The old answer — recurrent networks — processed tokens one at a time, carrying a hidden summary forward. Two problems: it was <b>sequential</b> (can't parallelize across the sentence, so slow on GPUs), and long-range links faded (by the time you reach "it," "animal" is a distant memory). Attention fixes both at once, as we'll see.</p>
+  </section>
+
+  <section id="qkv">
+    <h2><span class="num">2</span> Query, Key, Value: a soft lookup</h2>
+    <div class="plain"><b>In plain words:</b> each token produces three vectors — a query (what I'm looking for), a key (what I offer), and a value (what I'll hand over). Match queries to keys to decide how much of each value to take.</div>
+    <p>Think of a dictionary lookup, but fuzzy. Every token emits three little vectors (each just a matmul of its embedding with a learned weight matrix):</p>
+    <div class="qkv">
+      <div class="box q"><b>Query (Q)</b><span class="muted">"Here's what I'm looking for." — the question this token asks.</span></div>
+      <div class="box k"><b>Key (K)</b><span class="muted">"Here's what I'm about." — a label other tokens match against.</span></div>
+      <div class="box v"><b>Value (V)</b><span class="muted">"Here's what I'll contribute." — the content passed along if matched.</span></div>
+    </div>
+    <p>In a normal dictionary a query matches exactly one key. Here a query matches <em>every</em> key a little — strongly for relevant tokens, weakly for the rest — and the output is a <b>blend of values</b> weighted by those matches. When Q, K, and V all come from the <em>same</em> sequence, it's called <b>self-attention</b> (the sentence attending to itself).</p>
+  </section>
+
+  <section id="mechanism">
+    <h2><span class="num">3</span> The mechanism: score, soften, blend</h2>
+    <div class="plain"><b>In plain words:</b> for one token's query, dot it against every key to get match scores, softmax the scores into weights that sum to 1, then take that weighted average of the values.</div>
+    <p>Three steps, for each query token:</p>
+    <ul class="ann">
+      <li><b>Score</b> — dot the query with every key. A bigger dot product = a better match (#2's vectors pointing the same way).</li>
+      <li><b>Soften</b> — run the scores through <b>softmax</b> so they become positive weights that sum to 1 (an attention distribution over all tokens).</li>
+      <li><b>Blend</b> — take the weighted sum of the values using those weights. That blend is the token's new, context-aware representation.</li>
+    </ul>
+    <p>The famous one-line formula is just those three steps stacked: <b>Attention(Q,K,V) = softmax(QKᵀ / √d) · V</b>. Click a word to see <em>its</em> attention — how much it pulls from each other word:</p>
+    <div class="stage">
+      <div class="attn-sent" id="attnSent"></div>
+      <div class="attn-out" id="attnOut">Click a word to make it the <b>query</b> and see where its attention goes.</div>
+      <p class="muted" style="margin-top:8px;font-size:.78rem">Weights here are illustrative — a trained model learns them. But this is exactly the shape of what attention computes.</p>
+    </div>
+  </section>
+
+  <section id="matmul">
+    <h2><span class="num">4</span> It's mostly matmuls</h2>
+    <div class="plain"><b>In plain words:</b> every step of attention is a matrix multiply — so it runs on the exact GPU machinery from #1–3, and (unlike RNNs) all tokens are processed in parallel.</div>
+    <p>Look at what attention actually is, mechanically:</p>
+    <ul class="ann">
+      <li>Computing Q, K, V from the tokens — three <b>matmuls</b> (embeddings × learned weight matrices).</li>
+      <li><b>QKᵀ</b> — one big matmul giving every query-against-every-key score at once.</li>
+      <li><b>softmax(...) · V</b> — another matmul to blend the values.</li>
+    </ul>
+    <p>So attention is a short stack of matmuls with a softmax in the middle — which means it rides the same tiling, tensor cores, and fp16/bf16 from explainer #3, and processes <b>the whole sequence in parallel</b> rather than one token at a time. That parallelism is the first half of why it beat RNNs; the direct token-to-token links are the second.</p>
+  </section>
+
+  <section id="scale">
+    <h2><span class="num">5</span> Why divide by √d</h2>
+    <div class="plain"><b>In plain words:</b> dot products get bigger as the vectors get longer. Left unchecked, the scores blow up, softmax goes all-or-nothing, and gradients vanish — so we shrink them by √d.</div>
+    <p>A query·key score is a sum of <code>d</code> products (one per dimension). The more dimensions, the bigger that sum tends to get — its size grows with √d. Feed huge scores into softmax and it <b>saturates</b>: one weight goes to ~1, the rest to ~0, and the gradient through it nearly vanishes (the exact vanishing-gradient trap from explainer #4, §8).</p>
+    <div class="key"><b>The fix:</b> divide the scores by √d before the softmax. That keeps them around a sane size no matter the dimension, so softmax stays smooth and trainable. It's the "scaled" in <em>scaled dot-product attention</em> — a tiny constant that quietly makes training work.</div>
+  </section>
+
+  <section id="multihead">
+    <h2><span class="num">6</span> Multi-head attention</h2>
+    <div class="plain"><b>In plain words:</b> instead of one attention, run several in parallel — each "head" learns to look for a different kind of relationship — then stitch their outputs together.</div>
+    <p>One attention pattern can only capture one kind of relationship at a time. So transformers run several in parallel — typically 8–96 <b>heads</b>. Each head gets its own learned Q/K/V projections, so one head might track grammatical subjects, another might resolve pronouns like our "it → animal," another might follow punctuation.</p>
+    <p>Each head does the full score-soften-blend on its slice, and their outputs are concatenated and mixed by one more matmul. More heads, more relationship types captured at once — and since the heads are independent, they all run as one batched matmul on the GPU.</p>
+  </section>
+
+  <section id="mask">
+    <h2><span class="num">7</span> Causal masking: no peeking at the future</h2>
+    <div class="plain"><b>In plain words:</b> when a model generates text left-to-right, each token must only see the words before it. Masking sets the attention weights for future tokens to zero.</div>
+    <p>A language model writes one token at a time, each based on what came before. During training we show it whole sentences at once — so we must stop a token from "cheating" by attending to words that come <em>after</em> it (which, at generation time, won't exist yet).</p>
+    <p><b>Causal masking</b> does this: before the softmax, the scores for all future positions are forced to −∞, so their weights come out as 0. Each token attends only to itself and the past. This one trick is what turns self-attention into an engine that can <b>generate</b> text token by token — the foundation of every GPT-style model, which is exactly where explainer #7 picks up.</p>
+  </section>
+
+  <section id="recap" style="border-color:var(--accent)">
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
+    <p>A token's meaning depends on the others, so attention lets each one gather context directly. Every token emits a <b>query</b>, a <b>key</b>, and a <b>value</b>. For each query you <b>score</b> it against all keys (a dot product), <b>soften</b> the scores with <b>softmax</b> into weights that sum to 1, and <b>blend</b> the values by those weights — <code>softmax(QKᵀ/√d)·V</code>. When Q, K, V come from the same sequence it's <b>self-attention</b>. It's <b>all matmuls</b>, so it rides the GPU machinery of #1–3 and runs every token in parallel (beating RNNs). The <b>÷√d</b> keeps softmax from saturating (vanishing gradients, #4); <b>multi-head</b> runs many attentions in parallel for different relationships; and <b>causal masking</b> hides future tokens so the model can generate text.</p>
+    <div class="rcap-flow"><span class="n">Q · K · V</span><span class="a">→</span><span class="n">score = QKᵀ</span><span class="a">→</span><span class="n">softmax</span><span class="a">→</span><span class="n hl">blend V</span><span class="a">→</span><span class="n go">multi-head + mask</span></div>
+    <p class="muted" style="margin-top:14px">Next up: <b>#7 · Transformers &amp; LLMs</b> — stack attention with the other pieces into the full architecture behind GPT, end to end.</p>
+  </section>
+
+  <footer id="refs" style="text-align:left; max-width:760px; margin:30px auto 0; line-height:1.6">
+    <h3>References &amp; further reading</h3>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Primary sources.</b> Concepts here were checked against these:</p>
+    <ul class="refs">
+      <li><a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Vaswani et al., "Attention Is All You Need" (2017)</a> — <span>the paper that introduced scaled dot-product and multi-head attention.</span></li>
+      <li><a href="https://en.wikipedia.org/wiki/Attention_(machine_learning)" target="_blank" rel="noopener">Attention (machine learning) — Wikipedia</a> — <span>Q/K/V, the √d scaling, and causal masking, summarized.</span></li>
+    </ul>
+    <p style="margin:0 0 6px"><b style="color:var(--ink)">Explainers worth your time:</b></p>
+    <ul class="refs">
+      <li><a href="https://jalammar.github.io/illustrated-transformer/" target="_blank" rel="noopener">Jay Alammar, "The Illustrated Transformer"</a> <span>— the classic visual walkthrough of attention.</span></li>
+      <li><a href="https://www.youtube.com/watch?v=eMlx5fFNoYc" target="_blank" rel="noopener">3Blue1Brown, "Attention in transformers, visually explained"</a> <span>— the most intuitive video on the mechanism.</span></li>
+    </ul>
+    <p style="margin:0; color:var(--muted)">Visualizations, interactives, and plain-language writing by <b style="color:var(--ink)">Estee</b> · part of the <b style="color:var(--ink)">Explainers</b> series.</p>
+  </footer>
+</div>
+
+<button id="glossBtn">📖 Glossary</button>
+<div id="glossOverlay"></div>
+<aside id="glossPanel" aria-label="Glossary">
+  <button class="gclose" id="glossClose" aria-label="Close">×</button>
+  <h3>Quick glossary</h3>
+  <p class="ghint">Every term used in this explainer, in one place. Type to filter.</p>
+  <input class="gsearch" id="glossSearch" type="text" placeholder="Filter terms…">
+  <div id="glossList"></div>
+</aside>
+
+<script>
+(function(){
+  /* ---- Attention-weights visualizer (illustrative) ---- */
+  var toks=['The','animal','didn\'t','cross','the','street','because','it','was','too','tired'];
+  // illustrative affinity links (index pairs) — symmetric-ish strong relations
+  var links={7:[1,10], 10:[1,7], 3:[5], 5:[3], 1:[3,7], 8:[10], 0:[1], 4:[5], 6:[10,7]};
+  function weightsFor(qi){
+    var w=new Array(toks.length).fill(0.04);   // small baseline everywhere
+    w[qi]+=0.5;                                 // a token attends partly to itself
+    (links[qi]||[]).forEach(function(j){ w[j]+=0.6; });
+    var s=w.reduce(function(a,b){return a+b;},0);
+    return w.map(function(x){return x/s;});
+  }
+  var sent=document.getElementById('attnSent'), out=document.getElementById('attnOut');
+  function render(qi){
+    var w = qi==null ? null : weightsFor(qi);
+    sent.querySelectorAll('.attn-tok').forEach(function(el,i){
+      el.classList.toggle('q', i===qi);
+      var bar=el.querySelector('.attn-bar');
+      if(w){ el.style.background='rgba(63,185,80,'+(0.08+w[i]*0.9).toFixed(3)+')'; bar.style.width=(w[i]*100).toFixed(0)+'%'; }
+      else { el.style.background='var(--panel2)'; bar.style.width='0'; }
+    });
+    if(w){
+      var pairs=w.map(function(x,i){return [x,i];}).sort(function(a,b){return b[0]-a[0];}).slice(0,3)
+                 .filter(function(p){return p[1]!==qi;});
+      var names=pairs.map(function(p){return '<b>'+toks[p[1]]+'</b> ('+(p[0]*100).toFixed(0)+'%)';});
+      out.innerHTML='“'+toks[qi]+'” attends most to '+names.join(', ')+' — its new representation is a blend weighted like that.';
+    }
+  }
+  if(sent){
+    toks.forEach(function(t,i){
+      var el=document.createElement('div'); el.className='attn-tok';
+      el.innerHTML=t.replace('&','&amp;')+'<div class="attn-bar"></div>';
+      el.addEventListener('click',function(){render(i);});
+      sent.appendChild(el);
+    });
+  }
+
+  /* ---- Glossary drawer ---- */
+  var glossary=[
+    ['Attention','A mechanism where each token gathers information from other tokens by matching a query against their keys and blending their values.'],
+    ['Token','One unit of the input (roughly a word or word-piece). A sequence is a list of tokens.'],
+    ['Query / Key / Value','Three vectors each token produces (via learned matmuls): the query is what it\'s looking for, the key is what it offers, the value is what it contributes if matched.'],
+    ['Attention score','The dot product of a query with a key — how well they match. Higher = more relevant.'],
+    ['Softmax','Turns a row of scores into positive weights that sum to 1 — the attention distribution over tokens.'],
+    ['Self-attention','Attention where the queries, keys, and values all come from the same sequence — the sequence attending to itself.'],
+    ['Scaled dot-product attention','The standard form: softmax(QKᵀ / √d) · V. The √d keeps scores from blowing up the softmax.'],
+    ['Why ÷√d','A query·key score sums d terms, so it grows with √d. Dividing by √d keeps softmax from saturating and its gradients from vanishing (#4).'],
+    ['Multi-head attention','Several attention computations in parallel, each with its own learned projections, capturing different relationships; outputs are concatenated.'],
+    ['Causal mask','Forces attention to future tokens to zero so each position only sees the past — what lets a model generate text left-to-right.'],
+    ['It\'s matmuls','Q/K/V, QKᵀ, and ·V are all matrix multiplies, so attention runs on the GPU machinery of #1–3 and processes all tokens in parallel.']
+  ];
+  var glossList=document.getElementById('glossList');
+  glossary.forEach(function(g){var d=document.createElement('div');d.className='gterm';d.innerHTML='<b>'+g[0]+'</b><span>'+g[1]+'</span>';glossList.appendChild(d);});
+  var gPanel=document.getElementById('glossPanel'), gOverlay=document.getElementById('glossOverlay'), gSearch=document.getElementById('glossSearch');
+  function openGloss(e){if(e)e.preventDefault();gPanel.classList.add('open');gOverlay.classList.add('open');gSearch.focus();}
+  function closeGloss(){gPanel.classList.remove('open');gOverlay.classList.remove('open');}
+  document.getElementById('glossBtn').addEventListener('click',openGloss);
+  document.getElementById('glossClose').addEventListener('click',closeGloss);
+  gOverlay.addEventListener('click',closeGloss);
+  var tocLink=document.getElementById('glossTocLink'); if(tocLink) tocLink.addEventListener('click',openGloss);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGloss();});
+  gSearch.addEventListener('input',function(){
+    var q=gSearch.value.toLowerCase();
+    glossList.querySelectorAll('.gterm').forEach(function(el){el.classList.toggle('hide', q && el.textContent.toLowerCase().indexOf(q)<0);});
+  });
+})();
+</script>
+</body>
+</html>
