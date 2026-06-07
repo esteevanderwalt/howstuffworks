@@ -15,22 +15,21 @@ I come from a programming background and I'm learning in the open. Each **series
 
 ## How it's organised
 
-Each series lives in its own folder under `content/`, holding that series' explainers, landing page, roadmap, and assets. Shared, repo-wide files live at the root.
+The home page (`index.html`) lists every explainer and clicks straight through. Each series' content lives in its own folder under `content/`, so adding a second series later is just a new folder plus a few links on the home page.
 
 ```
 .
-├── index.html              ← top-level landing (links to every series)
+├── index.html              ← the home page (lists & links to every explainer)
 ├── README.md               ← you are here
 ├── LICENSE                 ← MIT (code & visuals only; see notes)
 ├── template.html           ← shared: copy this to start a new explainer
 ├── STYLE.md                ← shared: the explainer formula
 └── content/
-    └── gpu-to-frontier/    ← a series
-        ├── index.html          ← series landing
-        ├── README.md           ← series index
+    └── gpu-to-frontier/     ← the series
+        ├── README.md            ← series index
         ├── linkedin-post.md
         ├── assets/roadmap.svg
-        └── 01-how-gpus-work.html
+        └── 01–08 *.html         ← the eight explainers
 ```
 
 ## How the explainers are built
@@ -39,7 +38,7 @@ Every explainer is a **single, self-contained HTML file** — no build step, no 
 
 ## Hosting
 
-Enable GitHub Pages (Settings → Pages → *Deploy from a branch* → `main` / `/root`). The top-level landing is served at `https://esteevanderwalt.github.io/howstuffworks/`, and each series at `…/content/<series>/`.
+Enable GitHub Pages (Settings → Pages → *Deploy from a branch* → `main` / `/root`). The home page is served at `https://esteevanderwalt.github.io/howstuffworks/`, and each explainer at `…/content/gpu-to-frontier/NN-*.html`.
 
 ## Credit & sourcing
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Explainers — learning how things work, in public</title>
-<meta name="description" content="Visual, interactive explainers for programmers learning how things work under the hood.">
+<title>From GPUs to the Frontier — a visual explainer series</title>
+<meta name="description" content="Visual, interactive explainers taking a programmer from low-level GPUs to modern AI — one concept at a time.">
 <style>
   :root{
     --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
@@ -13,42 +13,72 @@
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; line-height:1.6}
-  .wrap{max-width:820px; margin:0 auto; padding:64px 20px 80px}
+  .wrap{max-width:880px; margin:0 auto; padding:56px 20px 80px}
   .kicker{color:var(--accent); font-weight:700; letter-spacing:.1em; text-transform:uppercase; font-size:.74rem}
-  h1{font-size:2.6rem; line-height:1.1; margin:.3em 0 .2em}
-  .sub{color:var(--muted); font-size:1.12rem; max-width:620px}
-  h2{font-size:1.15rem; margin:44px 0 14px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-size:.8rem}
-  .series{display:grid; gap:14px}
-  .scard{display:block; border:1px solid var(--line); border-radius:14px; padding:22px 24px; background:var(--panel); text-decoration:none; color:inherit; transition:border-color .15s, transform .15s}
-  .scard:hover{border-color:var(--accent); transform:translateY(-2px)}
-  .scard .row{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-  .scard h3{margin:0; font-size:1.4rem}
-  .scard .status{font-size:.74rem; font-weight:700; padding:3px 10px; border-radius:999px; background:rgba(63,185,80,.15); color:var(--green); border:1px solid rgba(63,185,80,.4)}
-  .scard p{color:var(--muted); margin:8px 0 0; font-size:.96rem}
-  .scard .arc{margin-top:12px; font-size:.82rem; color:var(--accent)}
-  .soon{opacity:.5; border-style:dashed; cursor:default}
-  .soon:hover{transform:none; border-color:var(--line)}
-  footer{margin-top:48px; color:var(--muted); font-size:.86rem; border-top:1px solid var(--line); padding-top:18px}
+  h1{font-size:2.5rem; line-height:1.12; margin:.3em 0 .15em}
+  .sub{color:var(--muted); font-size:1.1rem; max-width:620px}
+  h2{font-size:.8rem; margin:40px 0 14px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+  .cards{display:grid; gap:12px}
+  .card{display:flex; align-items:center; gap:16px; border:1px solid var(--line); border-radius:12px; padding:16px 18px; background:var(--panel); text-decoration:none; color:inherit; transition:border-color .15s, transform .15s}
+  .card:hover{border-color:var(--accent); transform:translateX(4px)}
+  .badge{flex:none; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; color:#04101f; font-size:1.05rem}
+  .card .body{flex:1}
+  .card .body b{display:block; font-size:1.05rem}
+  .card .body span{font-size:.88rem; color:var(--muted)}
+  .arrow{flex:none; color:var(--muted); font-size:1.1rem}
+  .card:hover .arrow{color:var(--accent)}
+  footer{margin-top:44px; color:var(--muted); font-size:.86rem; border-top:1px solid var(--line); padding-top:18px}
   footer a{color:var(--accent); text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="kicker">Explainers · learning in public</div>
-  <h1>How things actually work</h1>
-  <p class="sub">Visual, interactive explainers for programmers who want to understand what's under the hood — built one concept at a time, grounded in primary sources, and crediting the educators who inspired them.</p>
+  <div class="kicker">A visual explainer series</div>
+  <h1>From GPUs to the Frontier</h1>
+  <p class="sub">Eight interactive explainers that take a working programmer all the way from low-level GPU hardware to modern AI — one concept at a time, each building on the last. Learning in public, grounded in primary sources, and crediting the educators who inspired it.</p>
 
-  <h2>Series</h2>
-  <div class="series">
-    <a class="scard" href="content/gpu-to-frontier/index.html">
-      <div class="row"><h3>From GPUs to the Frontier</h3><span class="status">● Complete · 8 of 8</span></div>
-      <p>Take a programmer from low-level GPU hardware all the way to modern AI — one concept at a time, each building on the last.</p>
-      <div class="arc">GPUs → tensors → PyTorch → transformers → what's next →</div>
+  <h2>The explainers</h2>
+  <div class="cards">
+    <a class="card" href="content/gpu-to-frontier/01-how-gpus-work.html">
+      <span class="badge" style="background:#58a6ff">1</span>
+      <span class="body"><b>How GPUs Work</b><span>Parallel hardware & the execution model — why thousands of slow cores beat a few fast ones.</span></span>
+      <span class="arrow">→</span>
     </a>
-    <div class="scard soon">
-      <div class="row"><h3>More series coming</h3></div>
-      <p>Same approach, new topics. Have a request? Open an issue on GitHub.</p>
-    </div>
+    <a class="card" href="content/gpu-to-frontier/02-tensors.html">
+      <span class="badge" style="background:#3fb950">2</span>
+      <span class="body"><b>Tensors</b><span>The data structure of AI — flat buffers, shape, strides, dtypes, and how an op becomes a kernel.</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="content/gpu-to-frontier/03-matmul.html">
+      <span class="badge" style="background:#3fb950">3</span>
+      <span class="body"><b>Matmul</b><span>The one operation that runs the world — and why making it fast is a memory problem.</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="content/gpu-to-frontier/04-how-machines-learn.html">
+      <span class="badge" style="background:#d29922">4</span>
+      <span class="body"><b>How Machines Learn</b><span>Gradients, autograd & the training loop — the chain rule, made mechanical.</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="content/gpu-to-frontier/05-pytorch.html">
+      <span class="badge" style="background:#bc8cff">5</span>
+      <span class="body"><b>PyTorch</b><span>Where tensors, autograd & training meet — the production version of #2–4.</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="content/gpu-to-frontier/06-attention.html">
+      <span class="badge" style="background:#f78166">6</span>
+      <span class="body"><b>Attention</b><span>The idea that changed everything — query/key/value, and why it's mostly matmuls.</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="content/gpu-to-frontier/07-transformers-llms.html">
+      <span class="badge" style="background:#f78166">7</span>
+      <span class="body"><b>Transformers & LLMs</b><span>The full architecture, end to end — tokens, embeddings, blocks, generation.</span></span>
+      <span class="arrow">→</span>
+    </a>
+    <a class="card" href="content/gpu-to-frontier/08-whats-next.html">
+      <span class="badge" style="background:#ff7eb6">8</span>
+      <span class="body"><b>What's Next</b><span>Scaling & reasoning, MoE, efficiency, multimodal & agents — the frontier.</span></span>
+      <span class="arrow">→</span>
+    </a>
   </div>
 
   <footer>

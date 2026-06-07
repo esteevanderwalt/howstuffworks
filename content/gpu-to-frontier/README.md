@@ -4,7 +4,7 @@
 
 Visual, interactive explainers that take a working programmer all the way from low-level GPU hardware to modern AI — one concept at a time, each one building on the last.
 
-**🔗 Read this series live: https://esteevanderwalt.github.io/howstuffworks/content/gpu-to-frontier/**
+**🔗 Read this series live: https://esteevanderwalt.github.io/howstuffworks/**
 
 I come from a programming background and I'm learning AI/ML in the open. These are the explainers I wish existed: they start from something you already understand (a `for` loop, an array, a function) and show the leap to the new idea — without dumbing down the technical detail.
 
@@ -35,22 +35,20 @@ The shared look and structure live in [`template.html`](../../template.html): co
 
 ```
 content/gpu-to-frontier/
-├── index.html            ← this series' landing page
 ├── README.md             ← you are here (the series index)
-├── linkedin-post.md      ← launch post draft for explainer #1
+├── linkedin-post.md      ← launch post draft
 ├── assets/
 │   └── roadmap.svg       ← the series roadmap graphic
-├── 01-how-gpus-work.html
-└── 02-tensors.html       ← (future)
+└── 01–08 *.html          ← the eight explainers
 ```
 
-Shared, repo-wide files (`template.html`, `STYLE.md`, `LICENSE`, the top-level landing) live at the [repo root](../../).
+The site's home page (`index.html`) and shared files (`template.html`, `STYLE.md`, `LICENSE`) live at the [repo root](../../).
 
 ## Reading them
 
-- **Live:** https://esteevanderwalt.github.io/howstuffworks/content/gpu-to-frontier/
-- **Locally:** open `index.html` (or any `NN-*.html` explainer) directly in your browser.
-- **Hosting:** with GitHub Pages enabled on the repo, this series is served at `…/howstuffworks/content/gpu-to-frontier/`.
+- **Live:** https://esteevanderwalt.github.io/howstuffworks/ — the home page lists all eight.
+- **Locally:** open the repo's root `index.html`, or any `NN-*.html` explainer here, directly in your browser.
+- **Hosting:** with GitHub Pages enabled, the home is served at the repo root and each explainer at `…/content/gpu-to-frontier/NN-*.html`.
 
 ## Credit & sourcing
 
