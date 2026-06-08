@@ -216,14 +216,32 @@
   .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
   .pn.next{text-align:right}
   @media(max-width:560px){.pn-nav{flex-direction:column}}
+  /* objectives box (hero promise + skimmer TL;DR) */
+  .goals{background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:13px 16px; margin:16px 0 4px; max-width:640px}
+  .goals .gh{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-weight:700; margin-bottom:6px}
+  .goals ul{margin:0; padding-left:18px}
+  .goals li{margin:4px 0; font-size:.93rem}
+  /* home breadcrumb */
+  .back{display:inline-block; color:var(--muted); text-decoration:none; font-size:.82rem; margin-bottom:10px}
+  .back:hover{color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="hero">
+    <a class="back" href="../../index.html">← All explainers</a>
     <div class="kicker">Visual Explainer</div>
     <h1>How GPUs Actually Work</h1>
     <p class="sub">A plain-language, visual tour of GPU architecture and how code runs on them — built for programmers who know CPUs but not GPUs.</p>
+    <div class="goals">
+      <div class="gh">What you'll be able to explain</div>
+      <ul>
+        <li>why a GPU is fast even though each of its cores is slow</li>
+        <li>what a thread, a warp, and an SM actually are</li>
+        <li>what "occupancy" means — and why anyone tunes it</li>
+        <li>why all of this is the engine behind modern AI</li>
+      </ul>
+    </div>
     <div class="toc">
       <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
       <a href="#cpu-gpu">1 · CPU vs GPU</a>
@@ -653,8 +671,8 @@ C[i] = A[i] + B[i];                          <span class="cm">// the old loop bo
 
   <!-- recap -->
   <section id="recap" style="border-color:var(--accent)">
-    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
-    <p>A GPU is a <b>factory of SMs</b> (workshops), each packed with cores. You write a <b>kernel</b> — the instructions for one worker — and launch a <b>grid</b> of threads with <code>&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code>. Each thread computes its own <b>global index</b> (<code>blockIdx·blockDim + threadIdx</code>) to find the data it owns. Threads are grouped into <b>blocks</b> assigned to single SMs, then run 32-at-a-time as <b>warps</b>, all executing the same instruction on different data (<b>SIMT</b>). Memory is layered from instant <b>registers</b> up to a huge-but-distant <b>global memory</b>, and the GPU hides that distance by instantly swapping to another ready warp whenever one waits — for free, because every thread keeps its own registers. How full you keep each SM with warps is <b>occupancy</b>, and balancing it against register and memory limits is most of GPU performance work.</p>
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture</h2>
+    <p class="muted">Everything you just read, as one chain — from a loop to high throughput:</p>
     <div class="rcap-flow"><span class="n">independent loop</span><span class="a">→</span><span class="n">1 thread / item</span><span class="a">→</span><span class="n">block</span><span class="a">→</span><span class="n hl">warp = 32</span><span class="a">→</span><span class="n">SM</span><span class="a">→</span><span class="n go">high throughput</span></div>
   </section>
 

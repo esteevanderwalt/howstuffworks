@@ -23,14 +23,17 @@ The reader is a working programmer, not a beginner and not a specialist. They kn
 ## The standard skeleton
 
 ```
-Hero            title · one-line promise · TOC chips · source line
-▶ Start here    familiar ground → the leap → the one question
+Home link       "← All explainers" (.back) at the very top of the hero
+Hero            title · one-line promise · a .goals box ("What you'll be able to explain") · TOC chips · source line
+▶ Start here    familiar ground → the leap → the one question (just the hook — no summary; the goals box is the promise)
 1..N Sections   each: In-plain-words → prose/diagram/interactive → analogy/key callout
-✓ Recap         the whole picture in one paragraph + a visual arc (.rcap-flow) + hand-off to the next explainer
+✓ Recap         a one-line lead + the visual arc (.rcap-flow) — NO prose summary (it would just repeat the goals box)
 Prev / Next     a .pn-nav bar linking the previous & next explainer (a "↑ Series" home link fills the end slot on the first/last)
-Credit footer   source attribution + what's adapted vs added + your byline
+Credit footer   source attribution (doubles as "further reading") + what's adapted vs added + your byline
 📖 Glossary      every bolded term, searchable, reachable from anywhere
 ```
+
+The bookends mirror each other on purpose: the **goals box** up top is the *promise* (and the skimmer's TL;DR), the **arc** at the bottom is the *visual payoff*. Neither restates the body in prose — that was the old redundancy.
 
 ## Reusable building blocks (already in the template)
 
@@ -42,6 +45,8 @@ Credit footer   source attribution + what's adapted vs added + your byline
 | `.codecard` + `pre.code` | Annotated code snippets with light syntax highlighting |
 | `.stage` + `.toggle` | A two-state interactive demo (good case vs costly case) |
 | `.vs` | A side-by-side comparison table (e.g. CPU vs GPU) |
+| `.goals` | The hero "What you'll be able to explain" box — the promise + skimmer TL;DR |
+| `.back` | The "← All explainers" home link at the top of the hero |
 | `.rcap-flow` | The recap's visual arc — the explainer's key steps as connected nodes (`.hl` = pivotal, `.go` = payoff) |
 | Glossary drawer | Edit only the `glossary` array in the script; the mechanics are shared |
 

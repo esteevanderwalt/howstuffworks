@@ -241,15 +241,33 @@
   .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
   .pn.next{text-align:right}
   @media(max-width:560px){.pn-nav{flex-direction:column}}
+  /* home breadcrumb */
+  .back{display:inline-block; color:var(--muted); text-decoration:none; font-size:.82rem; margin-bottom:10px}
+  .back:hover{color:var(--accent)}
+  /* objectives box (hero promise + skimmer TL;DR) */
+  .goals{background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:13px 16px; margin:16px 0 4px; max-width:640px}
+  .goals .gh{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-weight:700; margin-bottom:6px}
+  .goals ul{margin:0; padding-left:18px}
+  .goals li{margin:4px 0; font-size:.93rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="hero">
+    <a class="back" href="../../index.html">← All explainers</a>
     <div class="kicker">Visual Explainer · Series #2</div>
     <h1>Tensors: the data structure of AI</h1>
     <p class="sub">Every number a neural network touches lives in a tensor. The surprise for a programmer is how it's stored — and that one fact explains almost everything tensors do.</p>
+    <div class="goals">
+      <div class="gh">What you’ll be able to explain</div>
+      <ul>
+        <li>what a tensor really is — a flat buffer plus a little metadata</li>
+        <li>why reshape and transpose are instant, and when an op secretly copies</li>
+        <li>what fp16/bf16 buy you, and why precision matters</li>
+        <li>how an everyday tensor op becomes a GPU kernel</li>
+      </ul>
+    </div>
     <div class="toc">
       <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
       <a href="#anatomy">1 · Anatomy</a>
@@ -387,8 +405,8 @@ i = blockIdx.x * blockDim.x + threadIdx.x
   </section>
 
   <section id="recap" style="border-color:var(--accent)">
-    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
-    <p>A <b>tensor</b> is a flat <b>storage</b> buffer plus metadata: <b>shape</b>, <b>strides</b>, and a <b>dtype</b>. To read element <code>[r][c]</code> it computes <code>r·stride₀ + c·stride₁</code> into the flat buffer — so <b>reshape and transpose are free</b> (just rewrite the strides) and produce <b>views</b> that share storage. Re-striding can make a tensor <b>non-contiguous</b>, and the moment an op needs ordered memory it calls <b>.contiguous()</b> and pays for one copy. The <b>dtype</b> sets how many bits each number gets — <b>fp16/bf16</b> halve memory and speed up the math. <b>Broadcasting</b> stretches size-1 dimensions for free with a <b>stride of 0</b>. And every tensor op is just a GPU kernel from explainer #1 launched over the buffer.</p>
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture</h2>
+    <p class="muted">Everything you just read, as one chain — from a flat buffer to a GPU kernel:</p>
     <div class="rcap-flow"><span class="n">flat buffer</span><span class="a">→</span><span class="n">+ shape &amp; strides</span><span class="a">→</span><span class="n hl">free views</span><span class="a">→</span><span class="n">dtype</span><span class="a">→</span><span class="n go">op = GPU kernel</span></div>
     <p class="muted" style="margin-top:14px">Next up: <b>#3 · Matmul</b> — the one operation that dominates everything, and how it's made fast.</p>
   </section>

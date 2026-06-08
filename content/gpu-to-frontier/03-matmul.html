@@ -232,15 +232,33 @@
   .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
   .pn.next{text-align:right}
   @media(max-width:560px){.pn-nav{flex-direction:column}}
+  /* home breadcrumb */
+  .back{display:inline-block; color:var(--muted); text-decoration:none; font-size:.82rem; margin-bottom:10px}
+  .back:hover{color:var(--accent)}
+  /* objectives box (hero promise + skimmer TL;DR) */
+  .goals{background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:13px 16px; margin:16px 0 4px; max-width:640px}
+  .goals .gh{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-weight:700; margin-bottom:6px}
+  .goals ul{margin:0; padding-left:18px}
+  .goals li{margin:4px 0; font-size:.93rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="hero">
+    <a class="back" href="../../index.html">← All explainers</a>
     <div class="kicker">Visual Explainer · Series #3</div>
     <h1>Matmul: the operation that runs the world</h1>
     <p class="sub">Almost all of an AI model's compute is one humble operation — matrix multiply. The math is trivial. Making it fast is the whole game, and it turns out to be a memory problem, not a math one.</p>
+    <div class="goals">
+      <div class="gh">What you’ll be able to explain</div>
+      <ul>
+        <li>why matrix multiply is almost all of an AI model’s compute</li>
+        <li>why the naive version is slow — and what “memory-bound” means</li>
+        <li>how tiling and tensor cores make it fast</li>
+        <li>why linear layers, convolutions, and attention are all matmul</li>
+      </ul>
+    </div>
     <div class="toc">
       <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
       <a href="#what">1 · What it computes</a>
@@ -364,8 +382,8 @@ C[row*N + col] = acc;</pre>
   </section>
 
   <section id="recap" style="border-color:var(--accent)">
-    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
-    <p>Matrix multiply is <b>2N³</b> independent multiply-adds — trivial math, perfect parallelism. The naive one-thread-per-cell kernel re-reads every input ~N times from slow global memory, giving an <b>arithmetic intensity</b> of ~0.25 FLOPs/byte: deeply <b>memory-bound</b>, cores idle. The cure is <b>reuse</b>. <b>Shared-memory tiling</b> loads a tile once and reuses each value T times, raising arithmetic intensity across the <b>roofline</b> ridge into <b>compute-bound</b>; <b>tensor cores</b> then crunch small matrix tiles in one instruction, fastest at fp16/bf16. Because linear layers, convolutions, and attention are all <b>GEMM</b>, this one optimization accelerates everything — and in practice you let <b>cuBLAS</b> do it.</p>
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture</h2>
+    <p class="muted">Everything you just read, as one chain — from 2N³ FLOPs to cuBLAS:</p>
     <div class="rcap-flow"><span class="n">2N³ FLOPs</span><span class="a">→</span><span class="n">naive: memory-bound</span><span class="a">→</span><span class="n hl">tiling = reuse</span><span class="a">→</span><span class="n">compute-bound</span><span class="a">→</span><span class="n">tensor cores</span><span class="a">→</span><span class="n go">cuBLAS</span></div>
     <p class="muted" style="margin-top:14px">Next up: <b>#4 · How Machines Learn</b> — stacking matmuls computes things, but how does a model <em>learn</em> the numbers inside them? Gradients, autograd, and the training loop.</p>
   </section>

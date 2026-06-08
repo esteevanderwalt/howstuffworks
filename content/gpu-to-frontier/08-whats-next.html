@@ -223,15 +223,33 @@
   .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
   .pn.next{text-align:right}
   @media(max-width:560px){.pn-nav{flex-direction:column}}
+  /* home breadcrumb */
+  .back{display:inline-block; color:var(--muted); text-decoration:none; font-size:.82rem; margin-bottom:10px}
+  .back:hover{color:var(--accent)}
+  /* objectives box (hero promise + skimmer TL;DR) */
+  .goals{background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:13px 16px; margin:16px 0 4px; max-width:640px}
+  .goals .gh{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-weight:700; margin-bottom:6px}
+  .goals ul{margin:0; padding-left:18px}
+  .goals li{margin:4px 0; font-size:.93rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="hero">
+    <a class="back" href="../../index.html">← All explainers</a>
     <div class="kicker">Visual Explainer · Series #8 · Finale</div>
     <h1>What's next: the frontier</h1>
     <p class="sub">You now understand the whole machine — from a loop on a GPU to a working LLM. The frontier isn't a different machine; it's pushing harder on the exact parts you've just learned. Here's where it's going, as of mid-2026.</p>
+    <div class="goals">
+      <div class="gh">What you’ll be able to explain</div>
+      <ul>
+        <li>why “bigger” is now joined by “think longer” (reasoning models)</li>
+        <li>how Mixture-of-Experts makes huge models cheap to run</li>
+        <li>how quantization and distillation shrink models to run anywhere</li>
+        <li>what multimodal models and agents add on top</li>
+      </ul>
+    </div>
     <div class="toc">
       <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
       <a href="#scaling">1 · Scaling &amp; reasoning</a>
@@ -312,8 +330,8 @@
   </section>
 
   <section id="recap" style="border-color:var(--accent)">
-    <h2><span class="num" style="background:var(--green)">✓</span> The whole series, in one breath</h2>
-    <p>You started with a <code>for</code> loop and a question — why are GPUs fast? Eight explainers later: a <b>GPU</b> runs thousands of threads of <b>matmul</b> (#1, #3) over <b>tensors</b> (#2); <b>gradients and a training loop</b> teach the weights (#4); <b>PyTorch</b> wires it all to the hardware (#5); <b>attention</b> lets tokens share context (#6); a stack of those becomes a <b>transformer / LLM</b> (#7); and the <b>frontier</b> — reasoning, MoE, efficiency, agents — is all of that, pushed harder (#8). It's matmul, attention, and a training loop, scaled. That's the machine.</p>
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole series</h2>
+    <p class="muted">The series in one line — and your map for what comes next:</p>
     <div class="rcap-flow"><span class="n">GPUs</span><span class="a">→</span><span class="n">Tensors</span><span class="a">→</span><span class="n">Matmul</span><span class="a">→</span><span class="n">Learning</span><span class="a">→</span><span class="n">PyTorch</span><span class="a">→</span><span class="n">Attention</span><span class="a">→</span><span class="n">Transformers</span><span class="a">→</span><span class="n go">Frontier</span></div>
 
     <p>You can now read almost any AI headline or paper and place it on this map. That was the whole point.</p>

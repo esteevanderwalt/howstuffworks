@@ -199,6 +199,14 @@
   .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
   .pn.next{text-align:right}
   @media(max-width:560px){.pn-nav{flex-direction:column}}
+  /* home breadcrumb */
+  .back{display:inline-block; color:var(--muted); text-decoration:none; font-size:.82rem; margin-bottom:10px}
+  .back:hover{color:var(--accent)}
+  /* objectives box (hero promise + skimmer TL;DR) */
+  .goals{background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:13px 16px; margin:16px 0 4px; max-width:640px}
+  .goals .gh{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-weight:700; margin-bottom:6px}
+  .goals ul{margin:0; padding-left:18px}
+  .goals li{margin:4px 0; font-size:.93rem}
 </style>
 </head>
 <body>
@@ -206,10 +214,22 @@
 
   <!-- ===================== HERO ===================== -->
   <header class="hero">
+    <a class="back" href="../../index.html">← All explainers</a>
     <div class="kicker">Visual Explainer</div>
     <!-- TODO: title + one-line subtitle -->
     <h1>TITLE GOES HERE</h1>
     <p class="sub">One-sentence promise of what the reader will understand by the end.</p>
+
+    <!-- TODO: 3–4 concrete things the reader will be able to explain. Keep them lively, not LMS-bland.
+         This box is the promise up front AND the skimmer's TL;DR — so the recap can stay light. -->
+    <div class="goals">
+      <div class="gh">What you’ll be able to explain</div>
+      <ul>
+        <li>concrete thing #1</li>
+        <li>concrete thing #2</li>
+        <li>concrete thing #3</li>
+      </ul>
+    </div>
 
     <!-- TODO: one TOC chip per section. Keep the ▶ Start here and 📖 Glossary chips. -->
     <div class="toc">
@@ -273,10 +293,10 @@
     <p>More content…</p>
   </section>
 
-  <!-- ===================== RECAP ===================== -->
+  <!-- ===================== RECAP (light: one lead line + the visual arc — no prose summary; the hero goals box already made the promise) ===================== -->
   <section id="recap" style="border-color:var(--accent)">
-    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
-    <p>One dense paragraph that walks the full chain of ideas, using the bolded key terms in order.</p>
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture</h2>
+    <p class="muted">Everything you just read, as one chain — from FAMILIAR to PAYOFF:</p>
     <!-- Visual arc: this explainer's key steps as connected nodes. Use .hl for a pivotal node, .go for the payoff. -->
     <div class="rcap-flow">
       <span class="n">step 1</span><span class="a">→</span>

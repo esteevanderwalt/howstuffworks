@@ -238,15 +238,33 @@
   .pn .ttl{display:block; font-weight:700; font-size:1rem; margin-top:2px; color:var(--ink)}
   .pn.next{text-align:right}
   @media(max-width:560px){.pn-nav{flex-direction:column}}
+  /* home breadcrumb */
+  .back{display:inline-block; color:var(--muted); text-decoration:none; font-size:.82rem; margin-bottom:10px}
+  .back:hover{color:var(--accent)}
+  /* objectives box (hero promise + skimmer TL;DR) */
+  .goals{background:var(--panel2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:13px 16px; margin:16px 0 4px; max-width:640px}
+  .goals .gh{font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; color:var(--accent); font-weight:700; margin-bottom:6px}
+  .goals ul{margin:0; padding-left:18px}
+  .goals li{margin:4px 0; font-size:.93rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="hero">
+    <a class="back" href="../../index.html">← All explainers</a>
     <div class="kicker">Visual Explainer · Series #7</div>
     <h1>Transformers &amp; LLMs: the full architecture</h1>
     <p class="sub">Attention is the engine. A transformer is the whole machine built around it — and a large language model is that machine, scaled up and trained to predict the next token. Here it is end to end.</p>
+    <div class="goals">
+      <div class="gh">What you’ll be able to explain</div>
+      <ul>
+        <li>the full pipeline from text to a next-token prediction</li>
+        <li>what tokenization, embeddings, and positions do</li>
+        <li>what’s inside a transformer block — and why it stacks</li>
+        <li>how generation works, and how an LLM is trained</li>
+      </ul>
+    </div>
     <div class="toc">
       <a href="#start" style="border-color:var(--purple);color:var(--purple)">▶ Start here</a>
       <a href="#pipeline">1 · The pipeline</a>
@@ -371,8 +389,8 @@ probs   = softmax(logits)         <span class="cm"># [vocab]  sums to 1</span></
   </section>
 
   <section id="recap" style="border-color:var(--accent)">
-    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture, in one breath</h2>
-    <p>An LLM is a pipeline: text is split into <b>tokens</b> (BPE), each token becomes an <b>embedding</b> with a <b>positional</b> signal added, and those vectors flow through a stack of <b>N transformer blocks</b>. Each block is <b>masked self-attention</b> (#6) plus a <b>feed-forward MLP</b>, each wrapped in a <b>residual connection</b> and <b>layer norm</b> (the deep-net fixes from #4). After the last block, a final matmul makes <b>logits</b> over the vocabulary and <b>softmax</b> turns them into next-token probabilities. <b>Generation</b> samples one token (shaped by <b>temperature</b> / top-k), appends it, and repeats — autoregression, made safe by the causal mask. The thing is built by <b>pretraining</b> (next-token prediction at web scale) then <b>fine-tuning + RLHF</b> to make it a helpful assistant. It's matmuls, attention, and a training loop — everything from #1–6 — assembled.</p>
+    <h2><span class="num" style="background:var(--green)">✓</span> The whole picture</h2>
+    <p class="muted">Everything you just read, as one chain — from text to a generated token:</p>
     <div class="rcap-flow"><span class="n">text</span><span class="a">→</span><span class="n">tokens</span><span class="a">→</span><span class="n">embeddings + pos</span><span class="a">→</span><span class="n hl">block × N</span><span class="a">→</span><span class="n">logits</span><span class="a">→</span><span class="n go">next token</span></div>
     <p class="muted" style="margin-top:14px">Next up: <b>#8 · What's Next</b> — scaling laws, mixture-of-experts, efficiency, long context, multimodal, and agents: where this all goes from here.</p>
   </section>
